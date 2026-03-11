@@ -6,7 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from "./errorResponse";
-export * from "./healthStatus";
-export * from "./photo";
-export * from "./uploadPhotoBody";
+export type UploadPhotoBody = {
+  file: Blob;
+  title?: string;
+  description?: string;
+};

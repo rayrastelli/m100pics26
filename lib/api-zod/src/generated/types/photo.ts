@@ -5,9 +5,6 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-export interface HealthStatus {
-  status: string;
-}
 
 export interface Photo {
   id: number;
@@ -18,15 +15,5 @@ export interface Photo {
   size: number;
   width?: number | null;
   height?: number | null;
-  createdAt: string;
+  createdAt: Date;
 }
-
-export interface ErrorResponse {
-  error: string;
-}
-
-export type UploadPhotoBody = {
-  file: Blob;
-  title?: string;
-  description?: string;
-};

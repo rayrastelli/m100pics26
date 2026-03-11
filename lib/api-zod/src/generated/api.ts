@@ -14,3 +14,63 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Returns a list of all uploaded photos
+ * @summary List all photos
+ */
+export const ListPhotosResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  filename: zod.string(),
+  mimeType: zod.string(),
+  size: zod.number(),
+  width: zod.number().nullish(),
+  height: zod.number().nullish(),
+  createdAt: zod.date(),
+});
+export const ListPhotosResponse = zod.array(ListPhotosResponseItem);
+
+/**
+ * Upload a new photo
+ * @summary Upload a photo
+ */
+export const UploadPhotoBody = zod.object({
+  file: zod.instanceof(File),
+  title: zod.string().optional(),
+  description: zod.string().optional(),
+});
+
+/**
+ * @summary Get a photo by ID
+ */
+export const GetPhotoParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetPhotoResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  filename: zod.string(),
+  mimeType: zod.string(),
+  size: zod.number(),
+  width: zod.number().nullish(),
+  height: zod.number().nullish(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Delete a photo
+ */
+export const DeletePhotoParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Get the photo file (image)
+ */
+export const GetPhotoFileParams = zod.object({
+  id: zod.coerce.number(),
+});

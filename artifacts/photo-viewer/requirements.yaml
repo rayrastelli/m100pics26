@@ -1,0 +1,10 @@
+packages:
+  "framer-motion": "For premium smooth animations in the lightbox and gallery grid"
+  "clsx": "For conditional class names"
+  "tailwind-merge": "For merging tailwind classes safely"
+  "date-fns": "For formatting upload dates gracefully"
+
+notes:
+  - Using generated hooks from @workspace/api-client-react
+  - Implemented custom drag-and-drop file upload to avoid dependency bloat
+  - Dark mode aesthetic forced via CSS variables for the requested minimal gallery look
