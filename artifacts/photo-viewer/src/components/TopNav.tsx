@@ -1,3 +1,4 @@
+import logoUrl from "@assets/m100_1773294651634.png";
 import { Images, ShieldCheck, LogOut, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -16,10 +17,8 @@ export function TopNav({ activeView, onNavigate }: TopNavProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center">
-            <Images className="w-4 h-4 text-zinc-300" />
-          </div>
-          <span className="font-semibold text-zinc-100 tracking-tight">Folio</span>
+          <img src={logoUrl} alt="Marching Hundred" className="w-8 h-8 object-contain rounded" />
+          <span className="font-semibold text-zinc-100 tracking-tight">Band Pics</span>
         </div>
 
         {/* Nav links */}
