@@ -65,7 +65,8 @@ function applyFilters(
     if (status === "active"   && !p.active) return false;
     if (status === "inactive" &&  p.active) return false;
     if (slideshow === "slideshow" && !p.slideshow) return false;
-    if (tags.length > 0 && !tags.includes(p.user_tag ?? "")) return false;
+    const safeTags = tags ?? [];
+    if (safeTags.length > 0 && !safeTags.includes(p.user_tag ?? "")) return false;
     return true;
   });
 }
@@ -115,20 +116,21 @@ function TagDropdown({
   onChange: (t: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
-  if (tags.length === 0) return null;
+  const safeSelected = selected ?? [];
+  if ((tags ?? []).length === 0) return null;
 
   const toggle = (tag: string) => {
     onChange(
-      selected.includes(tag) ? selected.filter((t) => t !== tag) : [...selected, tag]
+      safeSelected.includes(tag) ? safeSelected.filter((t) => t !== tag) : [...safeSelected, tag]
     );
   };
 
   const label =
-    selected.length === 0
+    safeSelected.length === 0
       ? "Tag"
-      : selected.length === 1
-      ? selected[0]
-      : `${selected.length} tags`;
+      : safeSelected.length === 1
+      ? safeSelected[0]
+      : `${safeSelected.length} tags`;
 
   return (
     <div className="relative">
@@ -136,14 +138,14 @@ function TagDropdown({
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm transition-colors",
-          selected.length > 0
+          safeSelected.length > 0
             ? "bg-zinc-100 text-zinc-900 border-zinc-100 font-medium"
             : "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300"
         )}
       >
         <AtSign className="w-3.5 h-3.5 flex-shrink-0" />
         <span className="max-w-[100px] truncate">{label}</span>
-        {selected.length > 0 ? (
+        {safeSelected.length > 0 ? (
           <span
             role="button"
             onClick={(e) => { e.stopPropagation(); onChange([]); }}
@@ -162,7 +164,7 @@ function TagDropdown({
             {/* Select all / clear */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-700">
               <span className="text-xs text-zinc-500 font-medium uppercase tracking-wide">Tags</span>
-              {selected.length > 0 && (
+              {safeSelected.length > 0 && (
                 <button
                   onClick={() => onChange([])}
                   className="text-xs text-zinc-400 hover:text-white transition-colors"
@@ -172,7 +174,7 @@ function TagDropdown({
               )}
             </div>
             {tags.map((tag) => {
-              const checked = selected.includes(tag);
+              const checked = safeSelected.includes(tag);
               return (
                 <button
                   key={tag}
