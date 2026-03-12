@@ -2,6 +2,13 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "./useAuth";
 
+const GCS_BUCKET = "boosterpics2026";
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+
+function gcsPublicUrl(objectPath: string): string {
+  return `https://storage.googleapis.com/${GCS_BUCKET}/${objectPath}`;
+}
+
 export interface AdminPhoto {
   id: string;
   user_id: string;
@@ -101,22 +108,26 @@ export function useAdmin() {
     const { data: profiles } = await supabase.from("profiles").select("id, email");
     const profileMap = new Map((profiles ?? []).map((p: { id: string; email: string }) => [p.id, p.email]));
 
-    const photosWithUrls = (photos ?? []).map((photo: AdminPhoto) => {
-      const { data: urlData } = supabase.storage.from("photos").getPublicUrl(photo.storage_path);
-      return {
-        ...photo,
-        url: urlData.publicUrl,
-        owner_email: profileMap.get(photo.user_id) ?? "Unknown",
-      };
-    });
+    const photosWithUrls = (photos ?? []).map((photo: AdminPhoto) => ({
+      ...photo,
+      url: gcsPublicUrl(photo.storage_path),
+      owner_email: profileMap.get(photo.user_id) ?? "Unknown",
+    }));
 
     setAllPhotos(photosWithUrls);
     setPhotosLoading(false);
   }, []);
 
   const deleteAnyPhoto = useCallback(async (photo: AdminPhoto) => {
-    const { error: storageErr } = await supabase.storage.from("photos").remove([photo.storage_path]);
-    if (storageErr) return { error: storageErr.message };
+    const delRes = await fetch(`${API_BASE}/api/storage/object`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ objectPath: photo.storage_path }),
+    });
+    if (!delRes.ok) {
+      const body = await delRes.json().catch(() => ({}));
+      return { error: (body as { error?: string }).error ?? "GCS delete failed" };
+    }
 
     const { error: dbErr } = await supabase.from("photos").delete().eq("id", photo.id);
     if (dbErr) return { error: dbErr.message };
