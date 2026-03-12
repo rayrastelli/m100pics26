@@ -57,7 +57,7 @@ function applyFilters(
   rating: RatingFilter,
   status: StatusFilter,
   slideshow: SlideshowFilter,
-  tag: string | null
+  tags: string[]
 ): Photo[] {
   return photos.filter((p) => {
     if (rating === "unrated" && p.rating !== null) return false;
@@ -65,7 +65,7 @@ function applyFilters(
     if (status === "active"   && !p.active) return false;
     if (status === "inactive" &&  p.active) return false;
     if (slideshow === "slideshow" && !p.slideshow) return false;
-    if (tag !== null && p.user_tag !== tag) return false;
+    if (tags.length > 0 && !tags.includes(p.user_tag ?? "")) return false;
     return true;
   });
 }
@@ -108,64 +108,91 @@ function SortDropdown({ value, onChange }: { value: SortKey; onChange: (k: SortK
 // ─── Tag dropdown ─────────────────────────────────────────────────────────────
 
 function TagDropdown({
-  tags, value, onChange,
+  tags, selected, onChange,
 }: {
   tags: string[];
-  value: string | null;
-  onChange: (t: string | null) => void;
+  selected: string[];
+  onChange: (t: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   if (tags.length === 0) return null;
+
+  const toggle = (tag: string) => {
+    onChange(
+      selected.includes(tag) ? selected.filter((t) => t !== tag) : [...selected, tag]
+    );
+  };
+
+  const label =
+    selected.length === 0
+      ? "Tag"
+      : selected.length === 1
+      ? selected[0]
+      : `${selected.length} tags`;
+
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm transition-colors",
-          value
+          selected.length > 0
             ? "bg-zinc-100 text-zinc-900 border-zinc-100 font-medium"
             : "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300"
         )}
       >
-        <AtSign className="w-3.5 h-3.5" />
-        {value ?? "Tag"}
-        {value ? (
+        <AtSign className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="max-w-[100px] truncate">{label}</span>
+        {selected.length > 0 ? (
           <span
             role="button"
-            onClick={(e) => { e.stopPropagation(); onChange(null); }}
-            className="ml-0.5 hover:text-red-400 transition-colors"
+            onClick={(e) => { e.stopPropagation(); onChange([]); }}
+            className="ml-0.5 hover:text-red-400 transition-colors flex-shrink-0"
           >
             <X className="w-3 h-3" />
           </span>
         ) : (
-          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", open && "rotate-180")} />
+          <ChevronDown className={cn("w-3.5 h-3.5 flex-shrink-0 transition-transform", open && "rotate-180")} />
         )}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1.5 z-20 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl overflow-hidden min-w-[160px] max-h-64 overflow-y-auto">
-            <button
-              onClick={() => { onChange(null); setOpen(false); }}
-              className="w-full flex items-center justify-between px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
-            >
-              All tags
-              {value === null && <Check className="w-3.5 h-3.5 text-zinc-400" />}
-            </button>
-            <div className="border-t border-zinc-700" />
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => { onChange(tag); setOpen(false); }}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
-              >
-                <span className="flex items-center gap-1.5">
-                  <AtSign className="w-3 h-3 text-zinc-500" />
-                  {tag}
-                </span>
-                {value === tag && <Check className="w-3.5 h-3.5 text-zinc-400" />}
-              </button>
-            ))}
+          <div className="absolute left-0 top-full mt-1.5 z-20 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl overflow-hidden min-w-[180px] max-h-72 overflow-y-auto">
+            {/* Select all / clear */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-700">
+              <span className="text-xs text-zinc-500 font-medium uppercase tracking-wide">Tags</span>
+              {selected.length > 0 && (
+                <button
+                  onClick={() => onChange([])}
+                  className="text-xs text-zinc-400 hover:text-white transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {tags.map((tag) => {
+              const checked = selected.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => toggle(tag)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
+                >
+                  {/* Checkbox */}
+                  <span className={cn(
+                    "w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
+                    checked ? "bg-zinc-100 border-zinc-100" : "border-zinc-500 bg-transparent"
+                  )}>
+                    {checked && <Check className="w-2.5 h-2.5 text-zinc-900" />}
+                  </span>
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <AtSign className="w-3 h-3 text-zinc-500 flex-shrink-0" />
+                    <span className="truncate">{tag}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </>
       )}
@@ -209,7 +236,7 @@ export default function GalleryPage() {
   const [ratingFilter, setRatingFilter]       = useState<RatingFilter>("all");
   const [statusFilter, setStatusFilter]       = useState<StatusFilter>("active");
   const [slideshowFilter, setSlideshowFilter] = useState<SlideshowFilter>("all");
-  const [tagFilter, setTagFilter]             = useState<string | null>(null);
+  const [tagFilter, setTagFilter]             = useState<string[]>([]);
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
 
@@ -230,7 +257,7 @@ export default function GalleryPage() {
   };
 
   const anyFilterActive =
-    ratingFilter !== "all" || statusFilter !== "all" || slideshowFilter !== "all" || tagFilter !== null;
+    ratingFilter !== "all" || statusFilter !== "all" || slideshowFilter !== "all" || tagFilter.length > 0;
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -268,7 +295,7 @@ export default function GalleryPage() {
                   ? `${photos.length} photo${photos.length !== 1 ? "s" : ""}`
                   : ""}
             </span>
-            <TagDropdown tags={allTags} value={tagFilter} onChange={setTagFilter} />
+            <TagDropdown tags={allTags} selected={tagFilter} onChange={setTagFilter} />
             <SortDropdown value={sort} onChange={setSort} />
             <button
               onClick={() => setUploadOpen(true)}
@@ -319,7 +346,7 @@ export default function GalleryPage() {
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="text-zinc-500 text-sm">No photos match these filters.</p>
           <button
-            onClick={() => { setRatingFilter("all"); setStatusFilter("active"); setSlideshowFilter("all"); setTagFilter(null); }}
+            onClick={() => { setRatingFilter("all"); setStatusFilter("active"); setSlideshowFilter("all"); setTagFilter([]); }}
             className="mt-3 text-xs text-zinc-400 underline hover:text-zinc-200 transition-colors"
           >
             Clear all filters
