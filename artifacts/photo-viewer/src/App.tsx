@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AuthPage from "@/pages/AuthPage";
 import GalleryPage from "@/pages/GalleryPage";
+import AdminPage from "@/pages/AdminPage";
+
+type View = "gallery" | "admin";
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const [view, setView] = useState<View>("gallery");
 
   if (loading) {
     return (
@@ -13,7 +18,13 @@ function AppContent() {
     );
   }
 
-  return user ? <GalleryPage /> : <AuthPage />;
+  if (!user) return <AuthPage />;
+
+  if (view === "admin") {
+    return <AdminPage onBack={() => setView("gallery")} />;
+  }
+
+  return <GalleryPage onAdminClick={() => setView("admin")} />;
 }
 
 export default function App() {

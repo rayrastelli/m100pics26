@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload, LogOut, Images } from "lucide-react";
+import { Upload, LogOut, Images, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePhotos } from "@/hooks/usePhotos";
 import { PhotoCard } from "@/components/PhotoCard";
@@ -7,8 +7,12 @@ import { Lightbox } from "@/components/Lightbox";
 import { UploadDialog } from "@/components/UploadDialog";
 import { EmptyState } from "@/components/EmptyState";
 
-export default function GalleryPage() {
-  const { user, signOut } = useAuth();
+interface GalleryPageProps {
+  onAdminClick: () => void;
+}
+
+export default function GalleryPage({ onAdminClick }: GalleryPageProps) {
+  const { user, isAdmin, signOut } = useAuth();
   const { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto } = usePhotos();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -32,12 +36,21 @@ export default function GalleryPage() {
             </div>
             <span className="font-semibold text-zinc-100 tracking-tight">Folio</span>
             {photos.length > 0 && (
-              <span className="text-xs text-zinc-600 ml-1">{photos.length} photo{photos.length !== 1 ? "s" : ""}</span>
+              <span className="text-xs text-zinc-400 ml-1">{photos.length} photo{photos.length !== 1 ? "s" : ""}</span>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-zinc-600 hidden sm:block truncate max-w-[180px]">{user?.email}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-500 hidden sm:block truncate max-w-[160px]">{user?.email}</span>
+            {isAdmin && (
+              <button
+                onClick={onAdminClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-400 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/20 transition-colors"
+                title="Admin panel"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" /> Admin
+              </button>
+            )}
             <button
               onClick={() => setUploadOpen(true)}
               className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors"

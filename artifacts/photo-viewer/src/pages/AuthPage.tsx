@@ -39,7 +39,7 @@ export default function AuthPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight">Folio</h1>
-          <p className="mt-1 text-sm text-zinc-500">Your personal photo library</p>
+          <p className="mt-1 text-sm text-zinc-400">Your personal photo library</p>
         </div>
 
         <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 shadow-xl">
