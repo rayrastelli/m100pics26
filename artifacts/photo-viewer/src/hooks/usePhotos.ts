@@ -8,7 +8,7 @@ export interface Photo {
   user_tag: string | null;
   title: string;
   description: string | null;
-  storage_path: string;
+  storage_path: string;   // GCS object path: pictureapp/<usertag>/<filename>
   filename: string;
   mime_type: string;
   size: number;
@@ -16,7 +16,18 @@ export interface Photo {
   height: number | null;
   rating: number | null;
   created_at: string;
-  url?: string;
+  url?: string;           // Derived: full GCS public URL
+}
+
+const GCS_BUCKET = "boosterpics2026";
+
+// Base URL for the api-server. In Replit dev the proxy routes /api to the
+// api-server automatically, so an empty string (relative path) works.
+// For Hostinger production, set VITE_API_URL to the deployed api-server origin.
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+
+function gcsPublicUrl(objectPath: string): string {
+  return `https://storage.googleapis.com/${GCS_BUCKET}/${objectPath}`;
 }
 
 export function usePhotos() {
@@ -38,12 +49,10 @@ export function usePhotos() {
 
       if (dbErr) throw dbErr;
 
-      const photosWithUrls = (data ?? []).map((photo: Photo) => {
-        const { data: urlData } = supabase.storage
-          .from("photos")
-          .getPublicUrl(photo.storage_path);
-        return { ...photo, url: urlData.publicUrl };
-      });
+      const photosWithUrls = (data ?? []).map((photo: Photo) => ({
+        ...photo,
+        url: gcsPublicUrl(photo.storage_path),
+      }));
 
       setPhotos(photosWithUrls);
     } catch (err: unknown) {
@@ -60,25 +69,52 @@ export function usePhotos() {
       description?: string
     ): Promise<{ error: string | null }> => {
       if (!user) return { error: "Not authenticated" };
+      if (!profile?.user_tag) return { error: "User tag not set — please set up your profile first" };
 
       try {
-        const ext = file.name.split(".").pop();
-        const storagePath = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        // 1. Get a signed upload URL from the api-server
+        const signRes = await fetch(`${API_BASE}/api/storage/sign-upload`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            userTag: profile.user_tag,
+          }),
+        });
 
-        const { error: uploadErr } = await supabase.storage
-          .from("photos")
-          .upload(storagePath, file, { contentType: file.type });
+        if (!signRes.ok) {
+          const body = await signRes.json().catch(() => ({}));
+          throw new Error((body as { error?: string }).error ?? "Failed to get upload URL");
+        }
 
-        if (uploadErr) throw uploadErr;
+        const { signedUrl, objectPath, publicUrl } = await signRes.json() as {
+          signedUrl: string;
+          objectPath: string;
+          publicUrl: string;
+        };
 
+        // 2. PUT the file directly to GCS using the signed URL
+        const uploadRes = await fetch(signedUrl, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type },
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`GCS upload failed: ${uploadRes.status} ${uploadRes.statusText}`);
+        }
+
+        // 3. Get image dimensions
         const dimensions = await getImageDimensions(file);
 
+        // 4. Save metadata to Supabase (storage_path = GCS object path)
         const { error: dbErr } = await supabase.from("photos").insert({
           user_id: user.id,
-          user_tag: profile?.user_tag ?? null,
+          user_tag: profile.user_tag,
           title: title || file.name,
           description: description || null,
-          storage_path: storagePath,
+          storage_path: objectPath,
           filename: file.name,
           mime_type: file.type,
           size: file.size,
@@ -88,10 +124,35 @@ export function usePhotos() {
         });
 
         if (dbErr) {
-          await supabase.storage.from("photos").remove([storagePath]);
+          // Best-effort cleanup: delete the uploaded GCS file
+          await fetch(`${API_BASE}/api/storage/object`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ objectPath }),
+          }).catch(() => {});
           throw dbErr;
         }
 
+        // Optimistically add the new photo to state
+        const newPhoto: Photo = {
+          id: "",
+          user_id: user.id,
+          user_tag: profile.user_tag,
+          title: title || file.name,
+          description: description || null,
+          storage_path: objectPath,
+          filename: file.name,
+          mime_type: file.type,
+          size: file.size,
+          width: dimensions?.width ?? null,
+          height: dimensions?.height ?? null,
+          rating: null,
+          created_at: new Date().toISOString(),
+          url: publicUrl,
+        };
+        setPhotos((prev) => [newPhoto, ...prev]);
+
+        // Then refresh to get the real DB row (with id, etc.)
         await fetchPhotos();
         return { error: null };
       } catch (err: unknown) {
@@ -104,11 +165,19 @@ export function usePhotos() {
   const deletePhoto = useCallback(
     async (photo: Photo): Promise<{ error: string | null }> => {
       try {
-        const { error: storageErr } = await supabase.storage
-          .from("photos")
-          .remove([photo.storage_path]);
-        if (storageErr) throw storageErr;
+        // 1. Delete from GCS
+        const delRes = await fetch(`${API_BASE}/api/storage/object`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ objectPath: photo.storage_path }),
+        });
 
+        if (!delRes.ok) {
+          const body = await delRes.json().catch(() => ({}));
+          throw new Error((body as { error?: string }).error ?? "GCS delete failed");
+        }
+
+        // 2. Delete metadata from Supabase
         const { error: dbErr } = await supabase
           .from("photos")
           .delete()

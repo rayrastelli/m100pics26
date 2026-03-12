@@ -30,3 +30,4 @@ timeoutMs = 20000
 [userenv.shared]
 VITE_SUPABASE_URL = "https://gepmwfcotpdpwdauyoca.supabase.co"
 VITE_SUPABASE_ANON_KEY = "sb_publishable_-mgTxYxS-ziTHIqSnBYN2g_kYcYoRT4"
+GCS_BUCKET_NAME = "boosterpics2026"
