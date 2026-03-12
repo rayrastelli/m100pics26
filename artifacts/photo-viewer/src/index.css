@@ -189,71 +189,73 @@
 }
 
 /* ─── FERRARI THEME ───────────────────────────────────────── */
+/* Background = Ferrari red · Accent = Ferrari yellow          */
 [data-theme="ferrari"] {
-  --color-zinc-950: #0d0000;
-  --color-zinc-900: #1a0000;
-  --color-zinc-800: #330000;
-  --color-zinc-700: #550000;
-  --color-zinc-600: #880000;
-  --color-zinc-500: #cc0000;
-  --color-zinc-400: #e63333;
-  --color-zinc-300: #f07070;
-  --color-zinc-200: #f9d0d0;
-  --color-zinc-100: #fff0f0;
+  --color-zinc-950: #dc0000; /* main page background: Ferrari red   */
+  --color-zinc-900: #c40000; /* cards / dialog surfaces             */
+  --color-zinc-800: #aa0000; /* borders, inputs                     */
+  --color-zinc-700: #920000; /* deeper borders / shadows            */
+  --color-zinc-600: #cc3333; /* muted raised elements               */
+  --color-zinc-500: #e09090; /* secondary / muted text on red bg    */
+  --color-zinc-400: #eec0b0; /* disabled / placeholder text         */
+  --color-zinc-300: #f5d890; /* warm mid-tone                       */
+  --color-zinc-200: #ffe850; /* warm yellow pre-accent              */
+  --color-zinc-100: #fff200; /* Ferrari yellow — primary text + btn */
   --color-zinc-50:  #ffffff;
-  --background: 0 100% 4%;
-  --foreground: 0 100% 95%;
-  --card: 0 100% 6%;
-  --card-foreground: 0 100% 95%;
-  --card-border: 0 80% 15%;
-  --border: 0 80% 18%;
-  --input: 0 80% 22%;
-  --ring: 0 80% 60%;
-  --popover: 0 100% 7%;
-  --popover-foreground: 0 100% 95%;
-  --popover-border: 0 80% 18%;
-  --primary: 0 100% 95%;
-  --primary-foreground: 0 100% 5%;
-  --secondary: 0 80% 13%;
-  --secondary-foreground: 0 60% 75%;
-  --muted: 0 80% 11%;
-  --muted-foreground: 0 50% 55%;
-  --accent: 0 80% 14%;
-  --accent-foreground: 0 60% 78%;
+  --background: 0 100% 43%;
+  --foreground: 55 100% 50%;
+  --card: 0 100% 38%;
+  --card-foreground: 55 100% 50%;
+  --card-border: 0 100% 33%;
+  --border: 0 100% 33%;
+  --input: 0 100% 30%;
+  --ring: 55 100% 50%;
+  --popover: 0 100% 36%;
+  --popover-foreground: 55 100% 50%;
+  --popover-border: 0 100% 30%;
+  --primary: 55 100% 50%;
+  --primary-foreground: 0 100% 38%;
+  --secondary: 0 100% 35%;
+  --secondary-foreground: 55 80% 80%;
+  --muted: 0 100% 33%;
+  --muted-foreground: 0 50% 75%;
+  --accent: 0 100% 35%;
+  --accent-foreground: 55 80% 80%;
 }
 
 /* ─── MCLAREN THEME ───────────────────────────────────────── */
+/* Background = Papaya orange · Accent = McLaren pale blue     */
 [data-theme="mclaren"] {
-  --color-zinc-950: #0d0600;
-  --color-zinc-900: #1a0c00;
-  --color-zinc-800: #331800;
-  --color-zinc-700: #552a00;
-  --color-zinc-600: #884400;
-  --color-zinc-500: #cc6600;
-  --color-zinc-400: #e88833;
-  --color-zinc-300: #f0b070;
-  --color-zinc-200: #f9e0c0;
-  --color-zinc-100: #fff5e8;
-  --color-zinc-50:  #ffffff;
-  --background: 24 100% 4%;
-  --foreground: 24 100% 95%;
-  --card: 24 100% 6%;
-  --card-foreground: 24 100% 95%;
-  --card-border: 24 80% 15%;
-  --border: 24 80% 18%;
-  --input: 24 80% 22%;
-  --ring: 24 80% 60%;
-  --popover: 24 100% 7%;
-  --popover-foreground: 24 100% 95%;
-  --popover-border: 24 80% 18%;
-  --primary: 24 100% 95%;
-  --primary-foreground: 24 100% 5%;
-  --secondary: 24 80% 13%;
-  --secondary-foreground: 24 60% 75%;
-  --muted: 24 80% 11%;
-  --muted-foreground: 24 50% 55%;
-  --accent: 24 80% 14%;
-  --accent-foreground: 24 60% 78%;
+  --color-zinc-950: #ff8000; /* main page background: papaya orange */
+  --color-zinc-900: #e57200; /* cards / dialog surfaces             */
+  --color-zinc-800: #cc6600; /* borders, inputs                     */
+  --color-zinc-700: #b35c00; /* deeper borders / shadows            */
+  --color-zinc-600: #995000; /* muted raised elements               */
+  --color-zinc-500: #886040; /* secondary / muted text on orange bg */
+  --color-zinc-400: #6888a8; /* blue-shift mid-tones                */
+  --color-zinc-300: #88b0cc; /* light blue                          */
+  --color-zinc-200: #aad0e8; /* pale blue pre-accent                */
+  --color-zinc-100: #5cc8e8; /* McLaren pale blue — text + btn      */
+  --color-zinc-50:  #d4f0fa;
+  --background: 30 100% 50%;
+  --foreground: 196 75% 64%;
+  --card: 30 100% 45%;
+  --card-foreground: 196 75% 64%;
+  --card-border: 30 100% 40%;
+  --border: 30 100% 40%;
+  --input: 30 100% 37%;
+  --ring: 196 75% 64%;
+  --popover: 30 100% 43%;
+  --popover-foreground: 196 75% 64%;
+  --popover-border: 30 100% 38%;
+  --primary: 196 75% 64%;
+  --primary-foreground: 30 100% 45%;
+  --secondary: 30 100% 40%;
+  --secondary-foreground: 196 50% 80%;
+  --muted: 30 100% 38%;
+  --muted-foreground: 30 40% 35%;
+  --accent: 30 100% 40%;
+  --accent-foreground: 196 50% 80%;
 }
 
 /* ─── MERCEDES THEME ──────────────────────────────────────── */
