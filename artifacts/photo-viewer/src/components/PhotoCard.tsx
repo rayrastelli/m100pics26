@@ -1,105 +1,59 @@
 import { useState } from "react";
 import { Trash2, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
-import { getGetPhotoFileUrl, useDeleteGalleryPhoto } from "@/hooks/use-photos";
-import type { Photo } from "@workspace/api-client-react";
-import { useToast } from "@/hooks/use-toast";
+import { Photo } from "@/hooks/usePhotos";
 
 interface PhotoCardProps {
   photo: Photo;
   index: number;
   onClick: () => void;
+  onDelete: (photo: Photo) => Promise<void>;
 }
 
-export function PhotoCard({ photo, index, onClick }: PhotoCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const { mutate: deletePhoto, isPending: isDeleting } = useDeleteGalleryPhoto();
-  const { toast } = useToast();
-  
-  const imageUrl = getGetPhotoFileUrl(photo.id);
+export function PhotoCard({ photo, index, onClick, onDelete }: PhotoCardProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent opening lightbox
-    
-    if (confirm("Are you sure you want to delete this photo?")) {
-      deletePhoto(
-        { id: photo.id },
-        {
-          onSuccess: () => {
-            toast({ description: "Photo deleted successfully" });
-          },
-          onError: () => {
-            toast({ 
-              title: "Error", 
-              description: "Failed to delete photo", 
-              variant: "destructive" 
-            });
-          }
-        }
-      );
-    }
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Delete this photo?")) return;
+    setIsDeleting(true);
+    await onDelete(photo);
+    setIsDeleting(false);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        duration: 0.4, 
-        ease: [0.23, 1, 0.32, 1], 
-        delay: index * 0.05 
-      }}
-      className="group relative aspect-square cursor-pointer overflow-hidden bg-secondary rounded-xl"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    <div
+      className="group relative aspect-square cursor-pointer overflow-hidden bg-zinc-800 rounded-xl"
+      style={{ animationDelay: `${index * 40}ms` }}
       onClick={onClick}
     >
       <img
-        src={imageUrl}
+        src={photo.url}
         alt={photo.title}
-        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+        className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         loading="lazy"
       />
-      
-      {/* Gradient Overlay */}
-      <div 
-        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 ${
-          isHovered ? "opacity-100" : "opacity-0"
-        }`}
-      />
 
-      {/* Content */}
-      <div 
-        className={`absolute inset-0 p-4 flex flex-col justify-between transition-opacity duration-300 ${
-          isHovered ? "opacity-100" : "opacity-0"
-        }`}
-      >
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+      <div className="absolute inset-0 p-3 flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <div className="flex justify-end">
           <button
             onClick={handleDelete}
             disabled={isDeleting}
-            className="p-2 bg-black/50 hover:bg-destructive/90 text-white rounded-full backdrop-blur-md transition-colors disabled:opacity-50"
+            className="p-2 bg-black/60 hover:bg-red-600 text-white rounded-full backdrop-blur-md transition-colors disabled:opacity-50"
             title="Delete photo"
           >
             {isDeleting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             )}
           </button>
         </div>
-        
-        <div>
-          <h3 className="text-white font-medium truncate text-lg drop-shadow-md">
-            {photo.title}
-          </h3>
-          {photo.description && (
-            <p className="text-white/80 text-sm truncate mt-0.5">
-              {photo.description}
-            </p>
-          )}
-        </div>
+        <h3 className="text-white text-sm font-medium truncate drop-shadow-md">
+          {photo.title}
+        </h3>
       </div>
-    </motion.div>
+    </div>
   );
 }

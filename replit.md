@@ -4,6 +4,17 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
+## Photo Viewer App (`artifacts/photo-viewer`)
+
+React + Vite SPA using Supabase for auth and storage. No backend needed.
+
+- **Auth**: Supabase email/password auth via `@supabase/supabase-js`
+- **Storage**: Supabase Storage bucket named `photos`
+- **Database**: Supabase Postgres table `photos` with RLS
+- **Env vars**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- **Hosting**: Built as a static SPA, deployable to Hostinger
+- **Setup SQL**: `artifacts/photo-viewer/SUPABASE_SETUP.sql` — must be run once in Supabase SQL Editor
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
