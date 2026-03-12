@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, AtSign } from "lucide-react";
 import { Photo } from "@/hooks/usePhotos";
 import { RatingPicker } from "@/components/RatingPicker";
 
@@ -63,6 +63,12 @@ export function PhotoCard({ photo, index, onClick, onDelete, onRate }: PhotoCard
           <h3 className="text-white text-sm font-medium truncate drop-shadow-md">
             {photo.title}
           </h3>
+          {photo.user_tag && (
+            <div className="flex items-center gap-1">
+              <AtSign className="w-3 h-3 text-white/50 flex-shrink-0" />
+              <span className="text-white/60 text-xs truncate">{photo.user_tag}</span>
+            </div>
+          )}
         </div>
       </div>
 
