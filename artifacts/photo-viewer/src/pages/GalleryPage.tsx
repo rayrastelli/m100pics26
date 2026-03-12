@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Upload, ChevronDown, Check, MonitorPlay, Eye, EyeOff } from "lucide-react";
+import { Upload, ChevronDown, Check, MonitorPlay, Eye } from "lucide-react";
 import { usePhotos, Photo } from "@/hooks/usePhotos";
 import { PhotoCard } from "@/components/PhotoCard";
 import { Lightbox } from "@/components/Lightbox";
@@ -137,7 +137,7 @@ export default function GalleryPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [sort, setSort] = useState<SortKey>("newest");
   const [ratingFilter, setRatingFilter]     = useState<RatingFilter>("all");
-  const [statusFilter, setStatusFilter]     = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter]     = useState<StatusFilter>("active");
   const [slideshowFilter, setSlideshowFilter] = useState<SlideshowFilter>("all");
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
@@ -171,11 +171,6 @@ export default function GalleryPage() {
               onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
               icon={<Eye className="w-3 h-3" />}
             >Active</Pill>
-            <Pill
-              active={statusFilter === "inactive"}
-              onClick={() => setStatusFilter(statusFilter === "inactive" ? "all" : "inactive")}
-              icon={<EyeOff className="w-3 h-3" />}
-            >Inactive</Pill>
 
             {/* Divider */}
             <span className="w-px h-4 bg-zinc-700 mx-0.5" />
@@ -246,7 +241,7 @@ export default function GalleryPage() {
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="text-zinc-500 text-sm">No photos match these filters.</p>
           <button
-            onClick={() => { setRatingFilter("all"); setStatusFilter("all"); setSlideshowFilter("all"); }}
+            onClick={() => { setRatingFilter("all"); setStatusFilter("active"); setSlideshowFilter("all"); }}
             className="mt-3 text-xs text-zinc-400 underline hover:text-zinc-200 transition-colors"
           >
             Clear all filters
