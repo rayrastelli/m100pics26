@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Upload, ChevronDown, Check, MonitorPlay, Eye } from "lucide-react";
+import { Upload, ChevronDown, Check, MonitorPlay, Eye, AtSign, X } from "lucide-react";
 import { usePhotos, Photo } from "@/hooks/usePhotos";
 import { PhotoCard } from "@/components/PhotoCard";
 import { Lightbox } from "@/components/Lightbox";
@@ -56,7 +56,8 @@ function applyFilters(
   photos: Photo[],
   rating: RatingFilter,
   status: StatusFilter,
-  slideshow: SlideshowFilter
+  slideshow: SlideshowFilter,
+  tag: string | null
 ): Photo[] {
   return photos.filter((p) => {
     if (rating === "unrated" && p.rating !== null) return false;
@@ -64,6 +65,7 @@ function applyFilters(
     if (status === "active"   && !p.active) return false;
     if (status === "inactive" &&  p.active) return false;
     if (slideshow === "slideshow" && !p.slideshow) return false;
+    if (tag !== null && p.user_tag !== tag) return false;
     return true;
   });
 }
@@ -94,6 +96,74 @@ function SortDropdown({ value, onChange }: { value: SortKey; onChange: (k: SortK
               >
                 {opt.label}
                 {opt.key === value && <Check className="w-3.5 h-3.5 text-zinc-400" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Tag dropdown ─────────────────────────────────────────────────────────────
+
+function TagDropdown({
+  tags, value, onChange,
+}: {
+  tags: string[];
+  value: string | null;
+  onChange: (t: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (tags.length === 0) return null;
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm transition-colors",
+          value
+            ? "bg-zinc-100 text-zinc-900 border-zinc-100 font-medium"
+            : "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300"
+        )}
+      >
+        <AtSign className="w-3.5 h-3.5" />
+        {value ?? "Tag"}
+        {value ? (
+          <span
+            role="button"
+            onClick={(e) => { e.stopPropagation(); onChange(null); }}
+            className="ml-0.5 hover:text-red-400 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </span>
+        ) : (
+          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", open && "rotate-180")} />
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1.5 z-20 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl overflow-hidden min-w-[160px] max-h-64 overflow-y-auto">
+            <button
+              onClick={() => { onChange(null); setOpen(false); }}
+              className="w-full flex items-center justify-between px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
+            >
+              All tags
+              {value === null && <Check className="w-3.5 h-3.5 text-zinc-400" />}
+            </button>
+            <div className="border-t border-zinc-700" />
+            {tags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => { onChange(tag); setOpen(false); }}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <AtSign className="w-3 h-3 text-zinc-500" />
+                  {tag}
+                </span>
+                {value === tag && <Check className="w-3.5 h-3.5 text-zinc-400" />}
               </button>
             ))}
           </div>
@@ -136,15 +206,22 @@ export default function GalleryPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [sort, setSort] = useState<SortKey>("newest");
-  const [ratingFilter, setRatingFilter]     = useState<RatingFilter>("all");
-  const [statusFilter, setStatusFilter]     = useState<StatusFilter>("active");
+  const [ratingFilter, setRatingFilter]       = useState<RatingFilter>("all");
+  const [statusFilter, setStatusFilter]       = useState<StatusFilter>("active");
   const [slideshowFilter, setSlideshowFilter] = useState<SlideshowFilter>("all");
+  const [tagFilter, setTagFilter]             = useState<string | null>(null);
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
 
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    photos.forEach((p) => { if (p.user_tag) set.add(p.user_tag); });
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [photos]);
+
   const displayedPhotos = useMemo(
-    () => sortPhotos(applyFilters(photos, ratingFilter, statusFilter, slideshowFilter), sort),
-    [photos, sort, ratingFilter, statusFilter, slideshowFilter]
+    () => sortPhotos(applyFilters(photos, ratingFilter, statusFilter, slideshowFilter, tagFilter), sort),
+    [photos, sort, ratingFilter, statusFilter, slideshowFilter, tagFilter]
   );
 
   const handleDelete = async (photo: Photo) => {
@@ -153,7 +230,7 @@ export default function GalleryPage() {
   };
 
   const anyFilterActive =
-    ratingFilter !== "all" || statusFilter !== "all" || slideshowFilter !== "all";
+    ratingFilter !== "all" || statusFilter !== "all" || slideshowFilter !== "all" || tagFilter !== null;
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -183,7 +260,7 @@ export default function GalleryPage() {
             >Slideshow</Pill>
           </div>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2">
             <span className="text-xs text-zinc-500 whitespace-nowrap">
               {anyFilterActive || displayedPhotos.length !== photos.length
                 ? `${displayedPhotos.length} of ${photos.length}`
@@ -191,6 +268,7 @@ export default function GalleryPage() {
                   ? `${photos.length} photo${photos.length !== 1 ? "s" : ""}`
                   : ""}
             </span>
+            <TagDropdown tags={allTags} value={tagFilter} onChange={setTagFilter} />
             <SortDropdown value={sort} onChange={setSort} />
             <button
               onClick={() => setUploadOpen(true)}
@@ -241,7 +319,7 @@ export default function GalleryPage() {
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="text-zinc-500 text-sm">No photos match these filters.</p>
           <button
-            onClick={() => { setRatingFilter("all"); setStatusFilter("active"); setSlideshowFilter("all"); }}
+            onClick={() => { setRatingFilter("all"); setStatusFilter("active"); setSlideshowFilter("all"); setTagFilter(null); }}
             className="mt-3 text-xs text-zinc-400 underline hover:text-zinc-200 transition-colors"
           >
             Clear all filters
