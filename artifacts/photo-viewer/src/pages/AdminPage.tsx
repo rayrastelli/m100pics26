@@ -405,7 +405,9 @@ function PhotosPanel({ photos, loading, onDelete }: PhotosPanelProps) {
                 </div>
                 <div>
                   <p className="text-white text-xs font-medium truncate">{photo.title}</p>
-                  <p className="text-white/50 text-xs truncate">{photo.owner_email}</p>
+                  <p className="text-white/50 text-xs truncate">
+                    {photo.user_tag ? `@${photo.user_tag}` : photo.owner_email}
+                  </p>
                 </div>
               </div>
             </div>

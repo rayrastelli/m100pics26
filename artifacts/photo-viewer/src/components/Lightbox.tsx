@@ -91,7 +91,10 @@ export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate }: Lig
           {photo.description && (
             <p className="text-white/60 text-sm">{photo.description}</p>
           )}
-          <div className="flex items-center justify-center gap-4 text-xs text-white/40 pt-1">
+          <div className="flex items-center justify-center gap-4 text-xs text-white/40 pt-1 flex-wrap">
+            {photo.user_tag && (
+              <span className="text-white/50 font-medium">@{photo.user_tag}</span>
+            )}
             <span className="flex items-center gap-1.5"><HardDrive className="w-3 h-3" />{formatBytes(photo.size)}</span>
             {photo.width && photo.height && (
               <span className="flex items-center gap-1.5"><Maximize className="w-3 h-3" />{photo.width} × {photo.height}</span>

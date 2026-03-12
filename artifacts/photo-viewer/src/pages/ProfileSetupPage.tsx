@@ -34,7 +34,7 @@ export default function ProfileSetupPage() {
         <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 shadow-xl space-y-5">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Username</label>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">User tag</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm select-none">@</span>
                 <input
@@ -66,7 +66,7 @@ export default function ProfileSetupPage() {
               className="w-full bg-zinc-100 text-zinc-900 font-medium py-2.5 rounded-lg text-sm hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {saving ? "Saving…" : "Save username"}
+              {saving ? "Saving…" : "Save user tag"}
             </button>
           </form>
 

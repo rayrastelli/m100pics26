@@ -5,6 +5,7 @@ import { Profile } from "./useAuth";
 export interface AdminPhoto {
   id: string;
   user_id: string;
+  user_tag: string | null;
   title: string;
   description: string | null;
   storage_path: string;
@@ -13,6 +14,7 @@ export interface AdminPhoto {
   size: number;
   width: number | null;
   height: number | null;
+  rating: number | null;
   created_at: string;
   url?: string;
   owner_email?: string;

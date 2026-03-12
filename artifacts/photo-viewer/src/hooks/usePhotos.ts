@@ -5,6 +5,7 @@ import { useAuth } from "./useAuth";
 export interface Photo {
   id: string;
   user_id: string;
+  user_tag: string | null;
   title: string;
   description: string | null;
   storage_path: string;
@@ -19,7 +20,7 @@ export interface Photo {
 }
 
 export function usePhotos() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export function usePhotos() {
 
         const { error: dbErr } = await supabase.from("photos").insert({
           user_id: user.id,
+          user_tag: profile?.user_tag ?? null,
           title: title || file.name,
           description: description || null,
           storage_path: storagePath,
@@ -96,7 +98,7 @@ export function usePhotos() {
         return { error: err instanceof Error ? err.message : "Upload failed" };
       }
     },
-    [user, fetchPhotos]
+    [user, profile, fetchPhotos]
   );
 
   const deletePhoto = useCallback(
