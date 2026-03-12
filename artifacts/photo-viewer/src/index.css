@@ -151,6 +151,213 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
+/* ─── LIGHT THEME ─────────────────────────────────────────── */
+[data-theme="light"] {
+  --color-zinc-950: #ffffff;
+  --color-zinc-900: #f4f4f5;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-600: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-400: #52525b;
+  --color-zinc-300: #3f3f46;
+  --color-zinc-200: #27272a;
+  --color-zinc-100: #18181b;
+  --color-zinc-50:  #09090b;
+  --background: 0 0% 100%;
+  --foreground: 240 10% 10%;
+  --card: 240 5% 96%;
+  --card-foreground: 240 10% 10%;
+  --card-border: 240 6% 88%;
+  --border: 240 6% 88%;
+  --input: 240 6% 85%;
+  --ring: 240 5% 40%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 10%;
+  --popover-border: 240 6% 85%;
+  --primary: 240 10% 12%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 5% 88%;
+  --secondary-foreground: 240 10% 20%;
+  --muted: 240 5% 90%;
+  --muted-foreground: 240 5% 40%;
+  --accent: 240 5% 88%;
+  --accent-foreground: 240 10% 20%;
+  --button-outline: rgba(0,0,0,0.10);
+  --elevate-1: rgba(0,0,0,0.04);
+  --elevate-2: rgba(0,0,0,0.08);
+}
+
+/* ─── FERRARI THEME ───────────────────────────────────────── */
+[data-theme="ferrari"] {
+  --color-zinc-950: #0d0000;
+  --color-zinc-900: #1a0000;
+  --color-zinc-800: #330000;
+  --color-zinc-700: #550000;
+  --color-zinc-600: #880000;
+  --color-zinc-500: #cc0000;
+  --color-zinc-400: #e63333;
+  --color-zinc-300: #f07070;
+  --color-zinc-200: #f9d0d0;
+  --color-zinc-100: #fff0f0;
+  --color-zinc-50:  #ffffff;
+  --background: 0 100% 4%;
+  --foreground: 0 100% 95%;
+  --card: 0 100% 6%;
+  --card-foreground: 0 100% 95%;
+  --card-border: 0 80% 15%;
+  --border: 0 80% 18%;
+  --input: 0 80% 22%;
+  --ring: 0 80% 60%;
+  --popover: 0 100% 7%;
+  --popover-foreground: 0 100% 95%;
+  --popover-border: 0 80% 18%;
+  --primary: 0 100% 95%;
+  --primary-foreground: 0 100% 5%;
+  --secondary: 0 80% 13%;
+  --secondary-foreground: 0 60% 75%;
+  --muted: 0 80% 11%;
+  --muted-foreground: 0 50% 55%;
+  --accent: 0 80% 14%;
+  --accent-foreground: 0 60% 78%;
+}
+
+/* ─── MCLAREN THEME ───────────────────────────────────────── */
+[data-theme="mclaren"] {
+  --color-zinc-950: #0d0600;
+  --color-zinc-900: #1a0c00;
+  --color-zinc-800: #331800;
+  --color-zinc-700: #552a00;
+  --color-zinc-600: #884400;
+  --color-zinc-500: #cc6600;
+  --color-zinc-400: #e88833;
+  --color-zinc-300: #f0b070;
+  --color-zinc-200: #f9e0c0;
+  --color-zinc-100: #fff5e8;
+  --color-zinc-50:  #ffffff;
+  --background: 24 100% 4%;
+  --foreground: 24 100% 95%;
+  --card: 24 100% 6%;
+  --card-foreground: 24 100% 95%;
+  --card-border: 24 80% 15%;
+  --border: 24 80% 18%;
+  --input: 24 80% 22%;
+  --ring: 24 80% 60%;
+  --popover: 24 100% 7%;
+  --popover-foreground: 24 100% 95%;
+  --popover-border: 24 80% 18%;
+  --primary: 24 100% 95%;
+  --primary-foreground: 24 100% 5%;
+  --secondary: 24 80% 13%;
+  --secondary-foreground: 24 60% 75%;
+  --muted: 24 80% 11%;
+  --muted-foreground: 24 50% 55%;
+  --accent: 24 80% 14%;
+  --accent-foreground: 24 60% 78%;
+}
+
+/* ─── MERCEDES THEME ──────────────────────────────────────── */
+[data-theme="mercedes"] {
+  --color-zinc-950: #000d0b;
+  --color-zinc-900: #001a17;
+  --color-zinc-800: #002e2a;
+  --color-zinc-700: #004a45;
+  --color-zinc-600: #006f69;
+  --color-zinc-500: #00a49c;
+  --color-zinc-400: #00d2be;
+  --color-zinc-300: #5de8df;
+  --color-zinc-200: #b0f5f2;
+  --color-zinc-100: #e0fffb;
+  --color-zinc-50:  #ffffff;
+  --background: 174 100% 4%;
+  --foreground: 174 80% 95%;
+  --card: 174 100% 6%;
+  --card-foreground: 174 80% 95%;
+  --card-border: 174 80% 14%;
+  --border: 174 80% 17%;
+  --input: 174 80% 20%;
+  --ring: 174 80% 55%;
+  --popover: 174 100% 7%;
+  --popover-foreground: 174 80% 95%;
+  --popover-border: 174 80% 17%;
+  --primary: 174 80% 95%;
+  --primary-foreground: 174 100% 4%;
+  --secondary: 174 80% 12%;
+  --secondary-foreground: 174 60% 72%;
+  --muted: 174 80% 10%;
+  --muted-foreground: 174 50% 52%;
+  --accent: 174 80% 13%;
+  --accent-foreground: 174 60% 75%;
+}
+
+/* ─── HAAS THEME ──────────────────────────────────────────── */
+[data-theme="haas"] {
+  --color-zinc-950: #070707;
+  --color-zinc-900: #111111;
+  --color-zinc-800: #1e1e1e;
+  --color-zinc-700: #2a2a2a;
+  --color-zinc-600: #770000;
+  --color-zinc-500: #bb0000;
+  --color-zinc-400: #dd3333;
+  --color-zinc-300: #f07070;
+  --color-zinc-200: #f9d0d0;
+  --color-zinc-100: #fff5f5;
+  --color-zinc-50:  #ffffff;
+  --background: 0 0% 3%;
+  --foreground: 0 0% 96%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 96%;
+  --card-border: 0 0% 12%;
+  --border: 0 0% 14%;
+  --input: 0 0% 17%;
+  --ring: 0 80% 55%;
+  --popover: 0 0% 6%;
+  --popover-foreground: 0 0% 96%;
+  --popover-border: 0 0% 14%;
+  --primary: 0 0% 95%;
+  --primary-foreground: 0 0% 5%;
+  --secondary: 0 0% 13%;
+  --secondary-foreground: 0 0% 75%;
+  --muted: 0 0% 11%;
+  --muted-foreground: 0 0% 55%;
+  --accent: 0 0% 13%;
+  --accent-foreground: 0 0% 78%;
+}
+
+/* ─── ASTON MARTIN THEME ──────────────────────────────────── */
+[data-theme="aston-martin"] {
+  --color-zinc-950: #000d08;
+  --color-zinc-900: #001510;
+  --color-zinc-800: #002918;
+  --color-zinc-700: #003d23;
+  --color-zinc-600: #005c34;
+  --color-zinc-500: #008048;
+  --color-zinc-400: #00a85e;
+  --color-zinc-300: #40cc88;
+  --color-zinc-200: #b0f0d0;
+  --color-zinc-100: #e0fff0;
+  --color-zinc-50:  #ffffff;
+  --background: 153 100% 4%;
+  --foreground: 153 80% 95%;
+  --card: 153 100% 5%;
+  --card-foreground: 153 80% 95%;
+  --card-border: 153 80% 12%;
+  --border: 153 80% 15%;
+  --input: 153 80% 18%;
+  --ring: 153 80% 50%;
+  --popover: 153 100% 6%;
+  --popover-foreground: 153 80% 95%;
+  --popover-border: 153 80% 15%;
+  --primary: 153 80% 95%;
+  --primary-foreground: 153 100% 4%;
+  --secondary: 153 80% 11%;
+  --secondary-foreground: 153 60% 70%;
+  --muted: 153 80% 9%;
+  --muted-foreground: 153 50% 50%;
+  --accent: 153 80% 11%;
+  --accent-foreground: 153 60% 73%;
+}
+
 @layer base {
   * {
     @apply border-border;

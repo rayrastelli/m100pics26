@@ -1,6 +1,7 @@
 import logoUrl from "@assets/m100_1773294651634.png";
 import { Images, ShieldCheck, LogOut, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { ThemePicker } from "@/components/ThemePicker";
 
 type ActiveView = "gallery" | "admin";
 
@@ -48,6 +49,7 @@ export function TopNav({ activeView, onNavigate }: TopNavProps) {
               {profile?.user_tag ? `@${profile.user_tag}` : profile?.email ?? ""}
             </span>
           </div>
+          <ThemePicker />
           <button
             onClick={signOut}
             className="flex items-center gap-1.5 p-2 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"

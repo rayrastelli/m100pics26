@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import AuthPage from "@/pages/AuthPage";
 import GalleryPage from "@/pages/GalleryPage";
 import AdminPage from "@/pages/AdminPage";
@@ -40,8 +41,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
