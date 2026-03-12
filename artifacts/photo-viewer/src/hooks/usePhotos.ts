@@ -15,6 +15,8 @@ export interface Photo {
   width: number | null;
   height: number | null;
   rating: number | null;
+  slideshow: boolean;
+  active: boolean;
   created_at: string;
   url?: string;           // Derived: full GCS public URL
 }
@@ -147,6 +149,8 @@ export function usePhotos() {
           width: dimensions?.width ?? null,
           height: dimensions?.height ?? null,
           rating: null,
+          slideshow: false,
+          active: true,
           created_at: new Date().toISOString(),
           url: publicUrl,
         };
@@ -215,7 +219,35 @@ export function usePhotos() {
     [fetchPhotos]
   );
 
-  return { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto, ratePhoto };
+  const toggleSlideshow = useCallback(
+    async (photoId: string, slideshow: boolean): Promise<{ error: string | null }> => {
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, slideshow } : p)));
+      try {
+        const { error: dbErr } = await supabase.from("photos").update({ slideshow }).eq("id", photoId);
+        if (dbErr) { await fetchPhotos(); throw dbErr; }
+        return { error: null };
+      } catch (err: unknown) {
+        return { error: err instanceof Error ? err.message : "Toggle failed" };
+      }
+    },
+    [fetchPhotos]
+  );
+
+  const toggleActive = useCallback(
+    async (photoId: string, active: boolean): Promise<{ error: string | null }> => {
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, active } : p)));
+      try {
+        const { error: dbErr } = await supabase.from("photos").update({ active }).eq("id", photoId);
+        if (dbErr) { await fetchPhotos(); throw dbErr; }
+        return { error: null };
+      } catch (err: unknown) {
+        return { error: err instanceof Error ? err.message : "Toggle failed" };
+      }
+    },
+    [fetchPhotos]
+  );
+
+  return { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto, ratePhoto, toggleSlideshow, toggleActive };
 }
 
 async function getImageDimensions(

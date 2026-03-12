@@ -10,7 +10,7 @@ interface LightboxProps {
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
-  onRate: (photoId: string, rating: number | null) => Promise<void>;
+  onRate: (photoId: string, rating: number | null) => Promise<unknown>;
 }
 
 export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate }: LightboxProps) {

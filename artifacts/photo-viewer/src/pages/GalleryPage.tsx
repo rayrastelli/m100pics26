@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Upload, ChevronDown, Check } from "lucide-react";
+import { Upload, ChevronDown, Check, MonitorPlay, Eye, EyeOff } from "lucide-react";
 import { usePhotos, Photo } from "@/hooks/usePhotos";
 import { PhotoCard } from "@/components/PhotoCard";
 import { Lightbox } from "@/components/Lightbox";
@@ -34,9 +34,11 @@ function sortPhotos(photos: Photo[], key: SortKey): Photo[] {
   });
 }
 
-// ─── Filter ───────────────────────────────────────────────────────────────────
+// ─── Filters ──────────────────────────────────────────────────────────────────
 
-type RatingFilter = "all" | "unrated" | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type RatingFilter  = "all" | "unrated" | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type StatusFilter  = "all" | "active" | "inactive";
+type SlideshowFilter = "all" | "slideshow";
 
 const RATING_FILTERS: { key: RatingFilter; label: string; dot?: string }[] = [
   { key: "all",     label: "All"      },
@@ -50,10 +52,20 @@ const RATING_FILTERS: { key: RatingFilter; label: string; dot?: string }[] = [
   { key: 7,         label: "7",  dot: "bg-emerald-400" },
 ];
 
-function filterPhotos(photos: Photo[], filter: RatingFilter): Photo[] {
-  if (filter === "all")     return photos;
-  if (filter === "unrated") return photos.filter((p) => p.rating === null);
-  return photos.filter((p) => p.rating !== null && p.rating >= (filter as number));
+function applyFilters(
+  photos: Photo[],
+  rating: RatingFilter,
+  status: StatusFilter,
+  slideshow: SlideshowFilter
+): Photo[] {
+  return photos.filter((p) => {
+    if (rating === "unrated" && p.rating !== null) return false;
+    if (typeof rating === "number" && (p.rating === null || p.rating < rating)) return false;
+    if (status === "active"   && !p.active) return false;
+    if (status === "inactive" &&  p.active) return false;
+    if (slideshow === "slideshow" && !p.slideshow) return false;
+    return true;
+  });
 }
 
 // ─── Sort dropdown ────────────────────────────────────────────────────────────
@@ -61,7 +73,6 @@ function filterPhotos(photos: Photo[], filter: RatingFilter): Photo[] {
 function SortDropdown({ value, onChange }: { value: SortKey; onChange: (k: SortKey) => void }) {
   const [open, setOpen] = useState(false);
   const label = SORT_OPTIONS.find((o) => o.key === value)?.label ?? "Sort";
-
   return (
     <div className="relative">
       <button
@@ -92,20 +103,48 @@ function SortDropdown({ value, onChange }: { value: SortKey; onChange: (k: SortK
   );
 }
 
+// ─── Filter pill ──────────────────────────────────────────────────────────────
+
+function Pill({
+  active, onClick, children, icon,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border",
+        active
+          ? "bg-zinc-100 text-zinc-900 border-zinc-100"
+          : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200"
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function GalleryPage() {
-  const { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto, ratePhoto } = usePhotos();
+  const { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto, ratePhoto, toggleSlideshow, toggleActive } = usePhotos();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [sort, setSort] = useState<SortKey>("newest");
-  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
+  const [ratingFilter, setRatingFilter]     = useState<RatingFilter>("all");
+  const [statusFilter, setStatusFilter]     = useState<StatusFilter>("all");
+  const [slideshowFilter, setSlideshowFilter] = useState<SlideshowFilter>("all");
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
 
   const displayedPhotos = useMemo(
-    () => sortPhotos(filterPhotos(photos, ratingFilter), sort),
-    [photos, sort, ratingFilter]
+    () => sortPhotos(applyFilters(photos, ratingFilter, statusFilter, slideshowFilter), sort),
+    [photos, sort, ratingFilter, statusFilter, slideshowFilter]
   );
 
   const handleDelete = async (photo: Photo) => {
@@ -113,56 +152,73 @@ export default function GalleryPage() {
     if (error) alert(`Delete failed: ${error}`);
   };
 
-  const handleRate = async (photoId: string, rating: number | null) => {
-    await ratePhoto(photoId, rating);
-  };
-
-  const filtered = displayedPhotos.length !== photos.length;
+  const anyFilterActive =
+    ratingFilter !== "all" || statusFilter !== "all" || slideshowFilter !== "all";
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
-      {/* ── Top bar ── */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      {/* ── Filter bar ── */}
+      <div className="space-y-2 mb-8">
 
-        {/* Rating filter pills */}
-        <div className="flex items-center gap-1.5 flex-wrap flex-1">
-          {RATING_FILTERS.map((f) => (
+        {/* Row 1: status + slideshow filters + count + sort + upload */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Status filter */}
+            <Pill active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>All</Pill>
+            <Pill
+              active={statusFilter === "active"}
+              onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
+              icon={<Eye className="w-3 h-3" />}
+            >Active</Pill>
+            <Pill
+              active={statusFilter === "inactive"}
+              onClick={() => setStatusFilter(statusFilter === "inactive" ? "all" : "inactive")}
+              icon={<EyeOff className="w-3 h-3" />}
+            >Inactive</Pill>
+
+            {/* Divider */}
+            <span className="w-px h-4 bg-zinc-700 mx-0.5" />
+
+            {/* Slideshow filter */}
+            <Pill
+              active={slideshowFilter === "slideshow"}
+              onClick={() => setSlideshowFilter(slideshowFilter === "slideshow" ? "all" : "slideshow")}
+              icon={<MonitorPlay className="w-3 h-3" />}
+            >Slideshow</Pill>
+          </div>
+
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-xs text-zinc-500 whitespace-nowrap">
+              {anyFilterActive || displayedPhotos.length !== photos.length
+                ? `${displayedPhotos.length} of ${photos.length}`
+                : photos.length > 0
+                  ? `${photos.length} photo${photos.length !== 1 ? "s" : ""}`
+                  : ""}
+            </span>
+            <SortDropdown value={sort} onChange={setSort} />
             <button
-              key={String(f.key)}
-              onClick={() => setRatingFilter(f.key)}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border",
-                ratingFilter === f.key
-                  ? "bg-zinc-100 text-zinc-900 border-zinc-100"
-                  : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200"
-              )}
+              onClick={() => setUploadOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors"
             >
-              {f.dot && (
-                <span className={cn("w-2 h-2 rounded-full flex-shrink-0", f.dot)} />
-              )}
-              {f.label}
+              <Upload className="w-3.5 h-3.5" />
+              Upload
             </button>
-          ))}
+          </div>
         </div>
 
-        {/* Right side: count + sort + upload */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-zinc-500 whitespace-nowrap">
-            {filtered
-              ? `${displayedPhotos.length} of ${photos.length}`
-              : photos.length > 0
-                ? `${photos.length} photo${photos.length !== 1 ? "s" : ""}`
-                : ""}
-          </span>
-          <SortDropdown value={sort} onChange={setSort} />
-          <button
-            onClick={() => setUploadOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Upload
-          </button>
+        {/* Row 2: rating filters */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {RATING_FILTERS.map((f) => (
+            <Pill
+              key={String(f.key)}
+              active={ratingFilter === f.key}
+              onClick={() => setRatingFilter(f.key)}
+              icon={f.dot ? <span className={cn("w-2 h-2 rounded-full flex-shrink-0", f.dot)} /> : undefined}
+            >
+              {f.label}
+            </Pill>
+          ))}
         </div>
       </div>
 
@@ -188,12 +244,12 @@ export default function GalleryPage() {
       {/* ── No results after filter ── */}
       {!loading && photos.length > 0 && displayedPhotos.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <p className="text-zinc-500 text-sm">No photos match this filter.</p>
+          <p className="text-zinc-500 text-sm">No photos match these filters.</p>
           <button
-            onClick={() => setRatingFilter("all")}
+            onClick={() => { setRatingFilter("all"); setStatusFilter("all"); setSlideshowFilter("all"); }}
             className="mt-3 text-xs text-zinc-400 underline hover:text-zinc-200 transition-colors"
           >
-            Show all photos
+            Clear all filters
           </button>
         </div>
       )}
@@ -208,7 +264,9 @@ export default function GalleryPage() {
               index={i}
               onClick={() => setLightboxIndex(i)}
               onDelete={handleDelete}
-              onRate={handleRate}
+              onRate={ratePhoto}
+              onToggleSlideshow={toggleSlideshow}
+              onToggleActive={toggleActive}
             />
           ))}
         </div>
@@ -222,7 +280,7 @@ export default function GalleryPage() {
           onClose={() => setLightboxIndex(null)}
           onPrev={() => setLightboxIndex((i) => Math.max(0, (i ?? 0) - 1))}
           onNext={() => setLightboxIndex((i) => Math.min(displayedPhotos.length - 1, (i ?? 0) + 1))}
-          onRate={handleRate}
+          onRate={ratePhoto}
         />
       )}
 
