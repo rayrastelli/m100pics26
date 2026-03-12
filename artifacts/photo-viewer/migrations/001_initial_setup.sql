@@ -52,6 +52,22 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 
 -- ============================================================
+-- HELPER: admin check (SECURITY DEFINER avoids RLS recursion)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
+
+-- ============================================================
 -- TRIGGER: auto-create profile row on signup
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -82,13 +98,7 @@ DROP POLICY IF EXISTS "Users can update their own photos" ON public.photos;
 
 CREATE POLICY "Users can view photos"
   ON public.photos FOR SELECT
-  USING (
-    auth.uid() = user_id
-    OR EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (auth.uid() = user_id OR public.is_admin());
 
 CREATE POLICY "Users can insert their own photos"
   ON public.photos FOR INSERT
@@ -96,23 +106,11 @@ CREATE POLICY "Users can insert their own photos"
 
 CREATE POLICY "Users can delete photos"
   ON public.photos FOR DELETE
-  USING (
-    auth.uid() = user_id
-    OR EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (auth.uid() = user_id OR public.is_admin());
 
 CREATE POLICY "Users can update their own photos"
   ON public.photos FOR UPDATE
-  USING (
-    auth.uid() = user_id
-    OR EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (auth.uid() = user_id OR public.is_admin());
 
 
 -- ============================================================
@@ -126,22 +124,11 @@ DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 
 CREATE POLICY "Admin can view all profiles"
   ON public.profiles FOR SELECT
-  USING (
-    auth.uid() = id
-    OR EXISTS (
-      SELECT 1 FROM public.profiles p2
-      WHERE p2.id = auth.uid() AND p2.role = 'admin'
-    )
-  );
+  USING (auth.uid() = id OR public.is_admin());
 
 CREATE POLICY "Admin can update any profile"
   ON public.profiles FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p2
-      WHERE p2.id = auth.uid() AND p2.role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 CREATE POLICY "Users can update their own profile"
   ON public.profiles FOR UPDATE
@@ -153,12 +140,7 @@ CREATE POLICY "Admin can insert profiles"
 
 CREATE POLICY "Admin can delete profiles"
   ON public.profiles FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p2
-      WHERE p2.id = auth.uid() AND p2.role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 
 -- ============================================================
@@ -194,10 +176,7 @@ CREATE POLICY "Users can delete their photos from storage"
     bucket_id = 'photos'
     AND (
       auth.uid()::text = (storage.foldername(name))[1]
-      OR EXISTS (
-        SELECT 1 FROM public.profiles
-        WHERE id = auth.uid() AND role = 'admin'
-      )
+      OR public.is_admin()
     )
   );
 
