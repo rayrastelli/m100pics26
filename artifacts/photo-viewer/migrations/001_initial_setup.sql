@@ -1,11 +1,12 @@
 -- ============================================================
--- FOLIO — Complete Database Setup (run once in Supabase SQL Editor)
--- Safe to re-run: uses IF NOT EXISTS / OR REPLACE / DROP IF EXISTS
+-- Migration 001 — Initial Setup
+-- Run once in Supabase SQL Editor to bootstrap the database.
+-- Safe to re-run (uses IF NOT EXISTS / OR REPLACE / ON CONFLICT).
 -- ============================================================
 
 
 -- ============================================================
--- 1. PHOTOS TABLE
+-- PHOTOS TABLE
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.photos (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -27,7 +28,7 @@ ALTER TABLE public.photos ENABLE ROW LEVEL SECURITY;
 
 
 -- ============================================================
--- 2. PROFILES TABLE
+-- PROFILES TABLE
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
   id         uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -51,7 +52,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 
 -- ============================================================
--- 3. TRIGGER: auto-create profile row on signup
+-- TRIGGER: auto-create profile row on signup
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
@@ -70,7 +71,7 @@ CREATE TRIGGER on_auth_user_created
 
 
 -- ============================================================
--- 4. PHOTOS — RLS POLICIES
+-- PHOTOS — RLS POLICIES
 -- ============================================================
 DROP POLICY IF EXISTS "Users can view their own photos"   ON public.photos;
 DROP POLICY IF EXISTS "Users can view photos"             ON public.photos;
@@ -115,12 +116,12 @@ CREATE POLICY "Users can update their own photos"
 
 
 -- ============================================================
--- 5. PROFILES — RLS POLICIES
+-- PROFILES — RLS POLICIES
 -- ============================================================
-DROP POLICY IF EXISTS "Admin can view all profiles"       ON public.profiles;
-DROP POLICY IF EXISTS "Admin can update any profile"      ON public.profiles;
-DROP POLICY IF EXISTS "Admin can insert profiles"         ON public.profiles;
-DROP POLICY IF EXISTS "Admin can delete profiles"         ON public.profiles;
+DROP POLICY IF EXISTS "Admin can view all profiles"        ON public.profiles;
+DROP POLICY IF EXISTS "Admin can update any profile"       ON public.profiles;
+DROP POLICY IF EXISTS "Admin can insert profiles"          ON public.profiles;
+DROP POLICY IF EXISTS "Admin can delete profiles"          ON public.profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 
 CREATE POLICY "Admin can view all profiles"
@@ -161,7 +162,7 @@ CREATE POLICY "Admin can delete profiles"
 
 
 -- ============================================================
--- 6. STORAGE BUCKET
+-- STORAGE BUCKET
 -- ============================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('photos', 'photos', true)
@@ -169,12 +170,12 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- ============================================================
--- 7. STORAGE — RLS POLICIES
+-- STORAGE — RLS POLICIES
 -- ============================================================
-DROP POLICY IF EXISTS "Users can upload their own photos"            ON storage.objects;
-DROP POLICY IF EXISTS "Public read access to photos"                 ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload their own photos"              ON storage.objects;
+DROP POLICY IF EXISTS "Public read access to photos"                   ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete their own photos from storage" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete their photos from storage"   ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their photos from storage"     ON storage.objects;
 
 CREATE POLICY "Users can upload their own photos"
   ON storage.objects FOR INSERT
@@ -202,8 +203,8 @@ CREATE POLICY "Users can delete their photos from storage"
 
 
 -- ============================================================
--- 8. BACKFILL: create profile rows for any existing auth users
---    (handles accounts created before the trigger existed)
+-- BACKFILL: create profile rows for any existing auth users
+-- (handles accounts created before this trigger existed)
 -- ============================================================
 INSERT INTO public.profiles (id, email, role)
 SELECT id, email, 'user'
@@ -212,11 +213,11 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- ============================================================
--- DONE. After running this:
+-- AFTER RUNNING THIS MIGRATION:
 --
--- 1. Disable email confirmation:
+-- 1. Disable email confirmation (do this in the dashboard):
 --    Auth → Providers → Email → turn off "Confirm email"
 --
--- 2. Set your admin account:
+-- 2. Set your admin account (run in SQL Editor):
 --    UPDATE public.profiles SET role = 'admin' WHERE email = 'your@email.com';
 -- ============================================================
