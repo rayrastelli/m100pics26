@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createHmac, createSign } from "node:crypto";
+import { createSign } from "node:crypto";
 
 const router = Router();
 
@@ -33,15 +33,30 @@ async function buildSignedUploadUrl(
   const credentialScope = `${dateStamp}/auto/storage/goog4_request`;
   const credential = `${sa.client_email}/${credentialScope}`;
 
-  const encodedPath = `/${objectPath.split("/").map(encodeURIComponent).join("/")}`;
+  // URL path: /<object> (host-based URL, bucket is in the hostname area already)
+  const encodedObjectPath = objectPath.split("/").map(encodeURIComponent).join("/");
+  // Canonical URI for signing must be /<bucket>/<object>
+  const canonicalPath = `/${BUCKET_NAME}/${encodedObjectPath}`;
 
   const headers = `content-type:${contentType}\nhost:storage.googleapis.com\n`;
   const signedHeaders = "content-type;host";
 
+  // Build query params once — used for BOTH the canonical request and the final URL.
+  // This guarantees the encoding is identical so the signature matches.
+  const queryParams = new URLSearchParams({
+    "X-Goog-Algorithm": "GOOG4-RSA-SHA256",
+    "X-Goog-Credential": credential,
+    "X-Goog-Date": requestTimestamp,
+    "X-Goog-Expires": String(expiresInSeconds),
+    "X-Goog-SignedHeaders": signedHeaders,
+  });
+  queryParams.sort(); // GCS requires alphabetical order
+  const canonicalQueryString = queryParams.toString();
+
   const canonicalRequest = [
     "PUT",
-    encodedPath,
-    `X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=${encodeURIComponent(credential)}&X-Goog-Date=${requestTimestamp}&X-Goog-Expires=${expiresInSeconds}&X-Goog-SignedHeaders=${signedHeaders}`,
+    canonicalPath,
+    canonicalQueryString,
     headers,
     signedHeaders,
     "UNSIGNED-PAYLOAD",
@@ -62,16 +77,10 @@ async function buildSignedUploadUrl(
   sign.end();
   const signature = sign.sign(sa.private_key, "hex");
 
-  const queryParams = new URLSearchParams({
-    "X-Goog-Algorithm": "GOOG4-RSA-SHA256",
-    "X-Goog-Credential": credential,
-    "X-Goog-Date": requestTimestamp,
-    "X-Goog-Expires": String(expiresInSeconds),
-    "X-Goog-SignedHeaders": signedHeaders,
-    "X-Goog-Signature": signature,
-  });
+  // Append signature to the same query string
+  queryParams.set("X-Goog-Signature", signature);
 
-  return `https://storage.googleapis.com/${BUCKET_NAME}${encodedPath}?${queryParams.toString()}`;
+  return `https://storage.googleapis.com/${BUCKET_NAME}/${encodedObjectPath}?${queryParams.toString()}`;
 }
 
 // POST /api/storage/sign-upload
