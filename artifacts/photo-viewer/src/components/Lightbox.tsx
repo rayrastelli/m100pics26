@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { X, ChevronLeft, ChevronRight, HardDrive, Maximize, FileImage } from "lucide-react";
 import { Photo } from "@/hooks/usePhotos";
+import { RatingPicker } from "@/components/RatingPicker";
 import { formatBytes } from "@/lib/utils";
 
 interface LightboxProps {
@@ -9,9 +10,10 @@ interface LightboxProps {
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
+  onRate: (photoId: string, rating: number | null) => Promise<void>;
 }
 
-export function Lightbox({ photos, index, onClose, onPrev, onNext }: LightboxProps) {
+export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate }: LightboxProps) {
   const photo = photos[index];
 
   useEffect(() => {
@@ -70,10 +72,22 @@ export function Lightbox({ photos, index, onClose, onPrev, onNext }: LightboxPro
           key={photo.id}
           src={photo.url}
           alt={photo.title}
-          className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl"
+          className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl"
         />
-        <div className="mt-5 text-center space-y-2 px-4">
+        <div className="mt-5 text-center space-y-3 px-4">
           <h2 className="text-white font-semibold text-lg">{photo.title}</h2>
+
+          <div className="flex items-center justify-center gap-3">
+            <RatingPicker
+              value={photo.rating}
+              onChange={(r) => onRate(photo.id, r)}
+              size="md"
+            />
+            {photo.rating !== null && (
+              <span className="text-xs text-white/40">{photo.rating}/7</span>
+            )}
+          </div>
+
           {photo.description && (
             <p className="text-white/60 text-sm">{photo.description}</p>
           )}

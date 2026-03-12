@@ -7,6 +7,7 @@ export interface Profile {
   email: string;
   role: "user" | "admin";
   disabled: boolean;
+  user_tag: string | null;
   created_at: string;
 }
 
@@ -21,6 +22,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateUserTag: (tag: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -85,12 +87,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) await loadProfile(user.id);
   };
 
+  const updateUserTag = async (tag: string): Promise<{ error: string | null }> => {
+    if (!user) return { error: "Not authenticated" };
+    const clean = tag.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (!clean) return { error: "Tag must contain letters, numbers, or underscores" };
+    const { error } = await supabase
+      .from("profiles")
+      .update({ user_tag: clean })
+      .eq("id", user.id);
+    if (error) {
+      if (error.code === "23505") return { error: `@${clean} is already taken` };
+      return { error: error.message };
+    }
+    setProfile((prev) => prev ? { ...prev, user_tag: clean } : prev);
+    return { error: null };
+  };
+
   const isAdmin = profile?.role === "admin";
 
   return (
     <AuthContext.Provider value={{
       user, session, profile, role: profile?.role ?? null, isAdmin, loading,
-      signIn, signUp, signOut, refreshProfile,
+      signIn, signUp, signOut, refreshProfile, updateUserTag,
     }}>
       {children}
     </AuthContext.Provider>

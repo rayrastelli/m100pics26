@@ -13,6 +13,7 @@ export interface Photo {
   size: number;
   width: number | null;
   height: number | null;
+  rating: number | null;
   created_at: string;
   url?: string;
 }
@@ -81,6 +82,7 @@ export function usePhotos() {
           size: file.size,
           width: dimensions?.width ?? null,
           height: dimensions?.height ?? null,
+          rating: null,
         });
 
         if (dbErr) {
@@ -120,7 +122,29 @@ export function usePhotos() {
     []
   );
 
-  return { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto };
+  const ratePhoto = useCallback(
+    async (photoId: string, rating: number | null): Promise<{ error: string | null }> => {
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, rating } : p))
+      );
+      try {
+        const { error: dbErr } = await supabase
+          .from("photos")
+          .update({ rating })
+          .eq("id", photoId);
+        if (dbErr) {
+          await fetchPhotos();
+          throw dbErr;
+        }
+        return { error: null };
+      } catch (err: unknown) {
+        return { error: err instanceof Error ? err.message : "Rating failed" };
+      }
+    },
+    [fetchPhotos]
+  );
+
+  return { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto, ratePhoto };
 }
 
 async function getImageDimensions(

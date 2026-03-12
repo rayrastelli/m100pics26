@@ -1,19 +1,15 @@
 import { useState, useEffect } from "react";
 import {
-  Users, Images, ArrowLeft, Plus, Trash2, Edit2, X, Check,
+  Users, Images, Plus, Trash2, Edit2, X, Check,
   ShieldCheck, ShieldOff, Loader2, UserPlus, Eye, EyeOff
 } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Profile } from "@/hooks/useAuth";
 import { formatBytes } from "@/lib/utils";
 
-interface AdminPageProps {
-  onBack: () => void;
-}
-
 type Tab = "users" | "photos";
 
-export default function AdminPage({ onBack }: AdminPageProps) {
+export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("users");
   const {
     users, usersLoading,
@@ -32,23 +28,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
   }, [tab, fetchAllPhotos]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
-          <div className="w-px h-5 bg-zinc-800" />
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-amber-400" />
-            <span className="font-semibold text-zinc-100 tracking-tight">Admin Panel</span>
-          </div>
-        </div>
-      </header>
-
+    <div className="text-zinc-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex gap-1 mb-6 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
           <TabBtn active={tab === "users"} onClick={() => setTab("users")} icon={<Users className="w-4 h-4" />} label="Users" />

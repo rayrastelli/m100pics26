@@ -3,11 +3,13 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AuthPage from "@/pages/AuthPage";
 import GalleryPage from "@/pages/GalleryPage";
 import AdminPage from "@/pages/AdminPage";
+import ProfileSetupPage from "@/pages/ProfileSetupPage";
+import { TopNav } from "@/components/TopNav";
 
 type View = "gallery" | "admin";
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading, isAdmin } = useAuth();
   const [view, setView] = useState<View>("gallery");
 
   if (loading) {
@@ -20,11 +22,20 @@ function AppContent() {
 
   if (!user) return <AuthPage />;
 
-  if (view === "admin") {
-    return <AdminPage onBack={() => setView("gallery")} />;
-  }
+  if (!profile?.user_tag) return <ProfileSetupPage />;
 
-  return <GalleryPage onAdminClick={() => setView("admin")} />;
+  const safeView = view === "admin" && !isAdmin ? "gallery" : view;
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <TopNav activeView={safeView} onNavigate={setView} />
+      {safeView === "admin" ? (
+        <AdminPage />
+      ) : (
+        <GalleryPage />
+      )}
+    </div>
+  );
 }
 
 export default function App() {
