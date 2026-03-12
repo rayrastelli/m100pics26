@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 
 export type ThemeId =
   | "dark"
@@ -17,13 +23,24 @@ export interface ThemeMeta {
 }
 
 export const THEMES: ThemeMeta[] = [
-  { id: "dark",        label: "Dark",         swatch: "#18181b" },
-  { id: "light",       label: "Light",        swatch: "#f4f4f5", swatchAlt: "#27272a" },
-  { id: "ferrari",     label: "Ferrari",      swatch: "#dc0000", swatchAlt: "#fff200" },
-  { id: "mclaren",     label: "McLaren",      swatch: "#ff8000", swatchAlt: "#5cc8e8" },
-  { id: "mercedes",    label: "Mercedes",     swatch: "#00d2be" },
-  { id: "haas",        label: "Haas",         swatch: "#bb0000", swatchAlt: "#111111" },
-  { id: "aston-martin",label: "Aston Martin", swatch: "#006f62" },
+  { id: "dark", label: "Dark", swatch: "#18181b" },
+  { id: "light", label: "Light", swatch: "#f4f4f5", swatchAlt: "#27272a" },
+  { id: "ferrari", label: "Ferrari", swatch: "#dc0000", swatchAlt: "#fff200" },
+  { id: "mclaren", label: "McLaren", swatch: "#ff8000", swatchAlt: "#5cc8e8" },
+  {
+    id: "mercedes",
+    label: "Mercedes",
+    swatch: "#00d2be",
+    swatchAlt: "#c1c2c3",
+  },
+  {
+    id: "mercedeslight",
+    label: "Mercedes Light",
+    swatch: "#c1c2c3",
+    swatchAlt: "#00d2be",
+  },
+  { id: "haas", label: "Haas", swatch: "#bb0000", swatchAlt: "#111111" },
+  { id: "aston-martin", label: "Aston Martin", swatch: "#006f62" },
 ];
 
 const STORAGE_KEY = "bandpics-theme";
