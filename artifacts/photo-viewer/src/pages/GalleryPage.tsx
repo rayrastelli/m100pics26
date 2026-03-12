@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Upload, ChevronDown, Check, MonitorPlay, Eye, AtSign, X } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Upload, ChevronDown, Check, MonitorPlay, Eye, AtSign, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePhotos, Photo } from "@/hooks/usePhotos";
 import { PhotoCard } from "@/components/PhotoCard";
 import { Lightbox } from "@/components/Lightbox";
@@ -237,6 +237,8 @@ export default function GalleryPage() {
   const [statusFilter, setStatusFilter]       = useState<StatusFilter>("active");
   const [slideshowFilter, setSlideshowFilter] = useState<SlideshowFilter>("all");
   const [tagFilter, setTagFilter]             = useState<string[]>([]);
+  const [pageSize, setPageSize]               = useState<number>(50);
+  const [currentPage, setCurrentPage]         = useState<number>(1);
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
 
@@ -246,15 +248,24 @@ export default function GalleryPage() {
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [photos]);
 
-  const displayedPhotos = useMemo(
+  const filteredPhotos = useMemo(
     () => sortPhotos(applyFilters(photos, ratingFilter, statusFilter, slideshowFilter, tagFilter), sort),
     [photos, sort, ratingFilter, statusFilter, slideshowFilter, tagFilter]
   );
+
+  // Reset to page 1 whenever filters/sort/pageSize change
+  useEffect(() => { setCurrentPage(1); }, [ratingFilter, statusFilter, slideshowFilter, tagFilter, sort, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPhotos.length / pageSize));
+  const pageStart  = (currentPage - 1) * pageSize;
+  const displayedPhotos = filteredPhotos.slice(pageStart, pageStart + pageSize);
 
   const handleDelete = async (photo: Photo) => {
     const { error } = await deletePhoto(photo);
     if (error) alert(`Delete failed: ${error}`);
   };
+
+  const changePage = useCallback((p: number) => setCurrentPage(p), []);
 
   const anyFilterActive =
     ratingFilter !== "all" || statusFilter !== "all" || slideshowFilter !== "all" || tagFilter.length > 0;
@@ -289,14 +300,31 @@ export default function GalleryPage() {
 
           <div className="ml-auto flex items-center gap-2">
             <span className="text-xs text-zinc-500 whitespace-nowrap">
-              {anyFilterActive || displayedPhotos.length !== photos.length
-                ? `${displayedPhotos.length} of ${photos.length}`
+              {anyFilterActive || filteredPhotos.length !== photos.length
+                ? `${filteredPhotos.length} of ${photos.length}`
                 : photos.length > 0
                   ? `${photos.length} photo${photos.length !== 1 ? "s" : ""}`
                   : ""}
             </span>
             <TagDropdown tags={allTags} selected={tagFilter} onChange={setTagFilter} />
             <SortDropdown value={sort} onChange={setSort} />
+            {/* Page size picker */}
+            <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden text-xs">
+              {[20, 50, 100, 500].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setPageSize(n)}
+                  className={cn(
+                    "px-2.5 py-1.5 transition-colors",
+                    pageSize === n
+                      ? "bg-zinc-100 text-zinc-900 font-semibold"
+                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                  )}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setUploadOpen(true)}
               className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors"
@@ -342,7 +370,7 @@ export default function GalleryPage() {
       )}
 
       {/* ── No results after filter ── */}
-      {!loading && photos.length > 0 && displayedPhotos.length === 0 && (
+      {!loading && photos.length > 0 && filteredPhotos.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="text-zinc-500 text-sm">No photos match these filters.</p>
           <button
@@ -369,6 +397,83 @@ export default function GalleryPage() {
               onToggleActive={toggleActive}
             />
           ))}
+        </div>
+      )}
+
+      {/* ── Pagination ── */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-8">
+          <button
+            onClick={() => changePage(1)}
+            disabled={currentPage === 1}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            title="First page"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <ChevronLeft className="w-3.5 h-3.5 -ml-2.5" />
+          </button>
+          <button
+            onClick={() => changePage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            title="Previous page"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Page number pills */}
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => {
+                if (totalPages <= 7) return true;
+                if (p === 1 || p === totalPages) return true;
+                if (Math.abs(p - currentPage) <= 1) return true;
+                return false;
+              })
+              .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                if (idx > 0 && typeof arr[idx - 1] === "number" && (p as number) - (arr[idx - 1] as number) > 1) {
+                  acc.push("…");
+                }
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((item, idx) =>
+                item === "…" ? (
+                  <span key={`ellipsis-${idx}`} className="px-1.5 text-zinc-600 text-sm select-none">…</span>
+                ) : (
+                  <button
+                    key={item}
+                    onClick={() => changePage(item as number)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg text-sm font-medium transition-colors",
+                      currentPage === item
+                        ? "bg-zinc-100 text-zinc-900"
+                        : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                    )}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+          </div>
+
+          <button
+            onClick={() => changePage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            title="Next page"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => changePage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            title="Last page"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-3.5 h-3.5 -ml-2.5" />
+          </button>
         </div>
       )}
 
