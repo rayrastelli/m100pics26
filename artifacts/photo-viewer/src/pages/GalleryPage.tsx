@@ -90,7 +90,7 @@ function applyFilters(
     if (status === "inactive" && p.active) return false;
     if (slideshow === "slideshow" && !p.slideshow) return false;
     const safeTags = tags ?? [];
-    if (safeTags.length > 0 && !safeTags.includes(p.user_tag ?? ""))
+    if (safeTags.length > 0 && !safeTags.some((t) => (p.tags ?? []).includes(t)))
       return false;
     return true;
   });
@@ -303,6 +303,7 @@ export default function GalleryPage() {
     ratePhoto,
     toggleSlideshow,
     toggleActive,
+    updateTags,
   } = usePhotos();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -322,7 +323,7 @@ export default function GalleryPage() {
   const allTags = useMemo(() => {
     const set = new Set<string>();
     photos.forEach((p) => {
-      if (p.user_tag) set.add(p.user_tag);
+      (p.tags ?? []).forEach((t) => set.add(t));
     });
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [photos]);
@@ -620,8 +621,10 @@ export default function GalleryPage() {
               Math.min(displayedPhotos.length - 1, (i ?? 0) + 1),
             )
           }
+          allTags={allTags}
           onRate={ratePhoto}
           onToggleSlideshow={toggleSlideshow}
+          onUpdateTags={(id, tags) => updateTags(id, tags)}
         />
       )}
 

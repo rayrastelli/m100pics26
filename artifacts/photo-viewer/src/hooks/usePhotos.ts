@@ -17,6 +17,7 @@ export interface Photo {
   rating: number | null;
   slideshow: boolean;
   active: boolean;
+  tags: string[];         // Flexible labels: names, groups, etc.
   created_at: string;
   url?: string;           // Derived: public Supabase Storage URL
 }
@@ -125,6 +126,7 @@ export function usePhotos() {
           rating: null,
           slideshow: false,
           active: true,
+          tags: [],
           created_at: new Date().toISOString(),
           url: publicUrl,
         };
@@ -216,7 +218,21 @@ export function usePhotos() {
     [fetchPhotos]
   );
 
-  return { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto, ratePhoto, toggleSlideshow, toggleActive };
+  const updateTags = useCallback(
+    async (photoId: string, tags: string[]): Promise<{ error: string | null }> => {
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, tags } : p)));
+      try {
+        const { error: dbErr } = await supabase.from("photos").update({ tags }).eq("id", photoId);
+        if (dbErr) { await fetchPhotos(); throw dbErr; }
+        return { error: null };
+      } catch (err: unknown) {
+        return { error: err instanceof Error ? err.message : "Update failed" };
+      }
+    },
+    [fetchPhotos]
+  );
+
+  return { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto, ratePhoto, toggleSlideshow, toggleActive, updateTags };
 }
 
 async function getImageDimensions(

@@ -2,20 +2,25 @@ import { useEffect } from "react";
 import { X, ChevronLeft, ChevronRight, HardDrive, Maximize, FileImage, MonitorPlay } from "lucide-react";
 import { Photo } from "@/hooks/usePhotos";
 import { RatingPicker } from "@/components/RatingPicker";
+import { TagEditor } from "@/components/TagEditor";
 import { formatBytes } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 interface LightboxProps {
   photos: Photo[];
   index: number;
+  allTags: string[];
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
   onRate: (photoId: string, rating: number | null) => Promise<unknown>;
   onToggleSlideshow: (photoId: string, slideshow: boolean) => Promise<unknown>;
+  onUpdateTags: (photoId: string, tags: string[]) => Promise<unknown>;
 }
 
-export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate, onToggleSlideshow }: LightboxProps) {
+export function Lightbox({
+  photos, index, allTags, onClose, onPrev, onNext, onRate, onToggleSlideshow, onUpdateTags,
+}: LightboxProps) {
   const photo = photos[index];
 
   useEffect(() => {
@@ -67,18 +72,19 @@ export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate, onTog
       )}
 
       <div
-        className="flex flex-col items-center w-full max-w-5xl mx-16 max-h-screen py-16"
+        className="flex flex-col items-center w-full max-w-2xl mx-16 max-h-screen py-16 overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <img
           key={photo.id}
           src={photo.url}
           alt={photo.title}
-          className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl"
+          className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-2xl"
         />
-        <div className="mt-5 text-center space-y-3 px-4">
-          <h2 className="text-white font-semibold text-lg">{photo.title}</h2>
+        <div className="mt-5 w-full space-y-4 px-2">
+          <h2 className="text-white font-semibold text-lg text-center">{photo.title}</h2>
 
+          {/* Rating */}
           <div className="flex items-center justify-center gap-3">
             <RatingPicker
               value={photo.rating}
@@ -106,10 +112,21 @@ export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate, onTog
             </button>
           </div>
 
+          {/* Tags */}
+          <div>
+            <p className="text-xs text-white/40 mb-1.5 text-center">Tags</p>
+            <TagEditor
+              tags={photo.tags ?? []}
+              allTags={allTags}
+              onChange={(tags) => onUpdateTags(photo.id, tags)}
+            />
+          </div>
+
+          {/* Metadata */}
           {photo.description && (
-            <p className="text-white/60 text-sm">{photo.description}</p>
+            <p className="text-white/60 text-sm text-center">{photo.description}</p>
           )}
-          <div className="flex items-center justify-center gap-4 text-xs text-white/40 pt-1 flex-wrap">
+          <div className="flex items-center justify-center gap-4 text-xs text-white/40 flex-wrap">
             {photo.user_tag && (
               <span className="text-white/50 font-medium">@{photo.user_tag}</span>
             )}
