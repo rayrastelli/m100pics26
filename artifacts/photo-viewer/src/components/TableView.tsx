@@ -30,6 +30,7 @@ interface TableViewProps {
   onToggleActive: (photoId: string, active: boolean) => Promise<{ error: string | null }>;
   onToggleSlideshow: (photoId: string, slideshow: boolean) => Promise<{ error: string | null }>;
   onUpdateTags: (photoId: string, tags: string[]) => Promise<{ error: string | null }>;
+  onOpenPhoto: (index: number) => void;
 }
 
 // ─── Dot rating cell ──────────────────────────────────────────────────────────
@@ -488,6 +489,7 @@ export function TableView({
   onToggleActive,
   onToggleSlideshow,
   onUpdateTags,
+  onOpenPhoto,
 }: TableViewProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -571,7 +573,7 @@ export function TableView({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
-              {photos.map((photo) => {
+              {photos.map((photo, photoIndex) => {
                 const sel = selected.has(photo.id);
                 return (
                   <tr
@@ -594,9 +596,12 @@ export function TableView({
                       </button>
                     </td>
 
-                    {/* Thumbnail */}
+                    {/* Thumbnail — click to open lightbox */}
                     <td className="py-1.5 pr-2">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
+                      <button
+                        onClick={() => onOpenPhoto(photoIndex)}
+                        className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0 block hover:ring-2 hover:ring-zinc-400 transition-all"
+                      >
                         {(photo.thumb_url ?? photo.url) ? (
                           <img
                             src={photo.thumb_url ?? photo.url}
@@ -607,7 +612,7 @@ export function TableView({
                         ) : (
                           <div className="w-full h-full bg-zinc-700" />
                         )}
-                      </div>
+                      </button>
                     </td>
 
                     {/* Title */}

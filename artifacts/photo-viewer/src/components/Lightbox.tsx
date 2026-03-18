@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, ChevronLeft, ChevronRight, HardDrive, Maximize, FileImage, MonitorPlay, AlertCircle } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, HardDrive, Maximize, FileImage, MonitorPlay, AlertCircle, ExternalLink } from "lucide-react";
 import { Photo } from "@/hooks/usePhotos";
 import { RatingPicker } from "@/components/RatingPicker";
 import { TagEditor } from "@/components/TagEditor";
@@ -90,10 +90,25 @@ export function Lightbox({
       >
         <img
           key={photo.id}
-          src={photo.url}
+          src={photo.med_url ?? photo.url}
           alt={photo.title}
           className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-2xl"
         />
+
+        {/* Open full-res in new tab */}
+        {photo.url && (
+          <a
+            href={photo.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 text-white/50 hover:bg-white/20 hover:text-white text-xs transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="w-3 h-3" />
+            Open full resolution
+          </a>
+        )}
+
         <div className="mt-5 w-full space-y-4 px-2">
           <h2 className="text-white font-semibold text-lg text-center">{photo.title}</h2>
 

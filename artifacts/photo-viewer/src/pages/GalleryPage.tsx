@@ -571,6 +571,7 @@ export default function GalleryPage() {
           onToggleActive={toggleActive}
           onToggleSlideshow={toggleSlideshow}
           onUpdateTags={updateTags}
+          onOpenPhoto={(i) => setLightboxIndex(i)}
         />
       )}
 
