@@ -42,7 +42,6 @@ export function usePhotos() {
       const { data, error: dbErr } = await supabase
         .from("photos")
         .select("*")
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (dbErr) throw dbErr;
