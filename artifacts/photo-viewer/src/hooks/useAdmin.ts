@@ -2,11 +2,11 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "./useAuth";
 
-const GCS_BUCKET = "boosterpics2026";
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+const STORAGE_BUCKET = "band-pics";
 
-function gcsPublicUrl(objectPath: string): string {
-  return `https://storage.googleapis.com/${GCS_BUCKET}/${objectPath}`;
+function supabasePublicUrl(storagePath: string): string {
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
+  return data.publicUrl;
 }
 
 export interface AdminPhoto {
@@ -22,6 +22,9 @@ export interface AdminPhoto {
   width: number | null;
   height: number | null;
   rating: number | null;
+  slideshow: boolean;
+  active: boolean;
+  tags: string[];
   created_at: string;
   url?: string;
   owner_email?: string;
@@ -49,12 +52,10 @@ export function useAdmin() {
   }, []);
 
   const createUser = useCallback(async (email: string, password: string, role: "user" | "admin") => {
-    // Create auth user via signUp (works from frontend)
     const { data, error: authErr } = await supabase.auth.signUp({ email, password });
     if (authErr) return { error: authErr.message };
     if (!data.user) return { error: "User creation failed" };
 
-    // Profile is auto-created by trigger; update role if needed
     if (role === "admin") {
       const { error: profileErr } = await supabase
         .from("profiles")
@@ -78,7 +79,6 @@ export function useAdmin() {
   }, [fetchUsers]);
 
   const deleteUser = useCallback(async (userId: string) => {
-    // Soft delete: mark disabled. Full auth deletion requires service_role (server-side only).
     const { error: err } = await supabase
       .from("profiles")
       .update({ disabled: true })
@@ -110,7 +110,8 @@ export function useAdmin() {
 
     const photosWithUrls = (photos ?? []).map((photo: AdminPhoto) => ({
       ...photo,
-      url: gcsPublicUrl(photo.storage_path),
+      tags: photo.tags ?? [],
+      url: supabasePublicUrl(photo.storage_path),
       owner_email: profileMap.get(photo.user_id) ?? "Unknown",
     }));
 
@@ -119,15 +120,11 @@ export function useAdmin() {
   }, []);
 
   const deleteAnyPhoto = useCallback(async (photo: AdminPhoto) => {
-    const delRes = await fetch(`${API_BASE}/api/storage/object`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objectPath: photo.storage_path }),
-    });
-    if (!delRes.ok) {
-      const body = await delRes.json().catch(() => ({}));
-      return { error: (body as { error?: string }).error ?? "GCS delete failed" };
-    }
+    const { error: storageErr } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .remove([photo.storage_path]);
+
+    if (storageErr) return { error: storageErr.message };
 
     const { error: dbErr } = await supabase.from("photos").delete().eq("id", photo.id);
     if (dbErr) return { error: dbErr.message };
