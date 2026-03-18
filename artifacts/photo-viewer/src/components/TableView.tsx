@@ -32,7 +32,14 @@ interface TableViewProps {
   onUpdateTags: (photoId: string, tags: string[]) => Promise<{ error: string | null }>;
 }
 
-// ─── Star rating cell ─────────────────────────────────────────────────────────
+// ─── Dot rating cell ──────────────────────────────────────────────────────────
+
+function dotColor(rating: number): string {
+  if (rating <= 2) return "border-red-400 bg-red-400";
+  if (rating <= 4) return "border-amber-400 bg-amber-400";
+  if (rating <= 6) return "border-blue-400 bg-blue-400";
+  return "border-emerald-400 bg-emerald-400";
+}
 
 function RatingCell({ photo, onRate }: { photo: Photo; onRate: TableViewProps["onRate"] }) {
   const [hover, setHover] = useState<number | null>(null);
@@ -45,6 +52,8 @@ function RatingCell({ photo, onRate }: { photo: Photo; onRate: TableViewProps["o
     setSaving(false);
   };
 
+  const display = hover ?? photo.rating ?? 0;
+
   if (saving) return <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" />;
 
   return (
@@ -56,12 +65,13 @@ function RatingCell({ photo, onRate }: { photo: Photo; onRate: TableViewProps["o
           onClick={() => set(n)}
           className="p-0.5 rounded transition-colors"
         >
-          <Star
+          <div
             className={cn(
-              "w-3 h-3 transition-colors",
-              (hover !== null ? n <= hover : n <= (photo.rating ?? 0))
-                ? "fill-amber-400 text-amber-400"
-                : "text-zinc-600",
+              "w-2 h-2 rounded-full border transition-colors",
+              n <= display
+                ? dotColor(hover ?? photo.rating ?? display)
+                : "border-zinc-600 bg-transparent",
+              hover !== null && "opacity-80",
             )}
           />
         </button>
