@@ -12,6 +12,7 @@ export type ThemeId =
   | "ferrari"
   | "mclaren"
   | "mercedes"
+  | "mercedeslight"
   | "haas"
   | "aston-martin";
 
