@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Upload,
   ChevronDown,
   Check,
   MonitorPlay,
   Eye,
-  AtSign,
+  Tag,
   X,
   ChevronLeft,
   ChevronRight,
@@ -159,8 +159,13 @@ function TagDropdown({
   onChange: (t: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const safeSelected = selected ?? [];
-  if ((tags ?? []).length === 0) return null;
+
+  const visibleTags = (tags ?? []).filter((t) =>
+    t.toLowerCase().includes(search.toLowerCase()),
+  );
 
   const toggle = (tag: string) => {
     onChange(
@@ -180,7 +185,7 @@ function TagDropdown({
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => { setOpen((o) => !o); setTimeout(() => inputRef.current?.focus(), 50); }}
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm transition-colors",
           safeSelected.length > 0
@@ -188,15 +193,12 @@ function TagDropdown({
             : "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300",
         )}
       >
-        <AtSign className="w-3.5 h-3.5 flex-shrink-0" />
-        <span className="max-w-[100px] truncate">{label}</span>
+        <Tag className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="max-w-[120px] truncate">{label}</span>
         {safeSelected.length > 0 ? (
           <span
             role="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onChange([]);
-            }}
+            onClick={(e) => { e.stopPropagation(); onChange([]); }}
             className="ml-0.5 hover:text-red-400 transition-colors flex-shrink-0"
           >
             <X className="w-3 h-3" />
@@ -212,23 +214,37 @@ function TagDropdown({
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1.5 z-20 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl overflow-hidden min-w-[180px] max-h-72 overflow-y-auto">
-            {/* Select all / clear */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-700">
+          <div className="fixed inset-0 z-10" onClick={() => { setOpen(false); setSearch(""); }} />
+          <div className="absolute left-0 top-full mt-1.5 z-20 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl overflow-hidden min-w-[200px]">
+            {/* Search input */}
+            <div className="p-2 border-b border-zinc-700">
+              <input
+                ref={inputRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search tags…"
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-500 outline-none focus:border-zinc-500 transition-colors"
+              />
+            </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-700">
               <span className="text-xs text-zinc-500 font-medium uppercase tracking-wide">
-                Tags
+                {visibleTags.length} tag{visibleTags.length !== 1 ? "s" : ""}
               </span>
               {safeSelected.length > 0 && (
                 <button
                   onClick={() => onChange([])}
                   className="text-xs text-zinc-400 hover:text-white transition-colors"
                 >
-                  Clear
+                  Clear all
                 </button>
               )}
             </div>
-            {tags.map((tag) => {
+            <div className="max-h-56 overflow-y-auto">
+              {visibleTags.length === 0 && (
+                <p className="px-3 py-3 text-sm text-zinc-500 text-center">No tags found</p>
+              )}
+              {visibleTags.map((tag) => {
               const checked = safeSelected.includes(tag);
               return (
                 <button
@@ -236,7 +252,6 @@ function TagDropdown({
                   onClick={() => toggle(tag)}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
                 >
-                  {/* Checkbox */}
                   <span
                     className={cn(
                       "w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors",
@@ -248,13 +263,14 @@ function TagDropdown({
                     {checked && <Check className="w-2.5 h-2.5 text-zinc-900" />}
                   </span>
                   <span className="flex items-center gap-1.5 min-w-0">
-                    <AtSign className="w-3 h-3 text-zinc-500 flex-shrink-0" />
+                    <Tag className="w-3 h-3 text-zinc-500 flex-shrink-0" />
                     <span className="truncate">{tag}</span>
                   </span>
                 </button>
               );
             })}
-          </div>
+            </div>{/* end scrollable list */}
+          </div>{/* end popup panel */}
         </>
       )}
     </div>
@@ -404,6 +420,13 @@ export default function GalleryPage() {
             >
               Slideshow
             </Pill>
+
+            {/* Tag filter — right of slideshow */}
+            <TagDropdown
+              tags={allTags}
+              selected={tagFilter}
+              onChange={setTagFilter}
+            />
           </div>
 
           <div className="ml-auto flex items-center gap-2">
@@ -414,11 +437,6 @@ export default function GalleryPage() {
                   ? `${photos.length} photo${photos.length !== 1 ? "s" : ""}`
                   : ""}
             </span>
-            <TagDropdown
-              tags={allTags}
-              selected={tagFilter}
-              onChange={setTagFilter}
-            />
             <SortDropdown value={sort} onChange={setSort} />
             {/* Page size picker */}
             <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden text-xs">
