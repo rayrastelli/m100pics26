@@ -90,6 +90,8 @@ export function usePhotos() {
         const dimensions = await getImageDimensions(file);
 
         // 4. Save metadata to Supabase DB
+        const autoTags = profile.user_tag ? [profile.user_tag] : [];
+
         const { error: dbErr } = await supabase.from("photos").insert({
           user_id: user.id,
           user_tag: profile.user_tag,
@@ -102,6 +104,7 @@ export function usePhotos() {
           width: dimensions?.width ?? null,
           height: dimensions?.height ?? null,
           rating: null,
+          tags: autoTags,
         });
 
         if (dbErr) {
@@ -126,7 +129,7 @@ export function usePhotos() {
           rating: null,
           slideshow: false,
           active: true,
-          tags: [],
+          tags: autoTags,
           created_at: new Date().toISOString(),
           url: publicUrl,
         };
