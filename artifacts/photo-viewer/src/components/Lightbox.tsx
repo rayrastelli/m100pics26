@@ -1,8 +1,9 @@
 import { useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, HardDrive, Maximize, FileImage } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, HardDrive, Maximize, FileImage, MonitorPlay } from "lucide-react";
 import { Photo } from "@/hooks/usePhotos";
 import { RatingPicker } from "@/components/RatingPicker";
 import { formatBytes } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface LightboxProps {
   photos: Photo[];
@@ -11,9 +12,10 @@ interface LightboxProps {
   onPrev: () => void;
   onNext: () => void;
   onRate: (photoId: string, rating: number | null) => Promise<unknown>;
+  onToggleSlideshow: (photoId: string, slideshow: boolean) => Promise<unknown>;
 }
 
-export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate }: LightboxProps) {
+export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate, onToggleSlideshow }: LightboxProps) {
   const photo = photos[index];
 
   useEffect(() => {
@@ -86,6 +88,22 @@ export function Lightbox({ photos, index, onClose, onPrev, onNext, onRate }: Lig
             {photo.rating !== null && (
               <span className="text-xs text-white/40">{photo.rating}/7</span>
             )}
+          </div>
+
+          {/* Slideshow toggle */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => onToggleSlideshow(photo.id, !photo.slideshow)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                photo.slideshow
+                  ? "bg-blue-500/80 text-white hover:bg-blue-600"
+                  : "bg-white/10 text-white/50 hover:bg-white/20 hover:text-white"
+              )}
+            >
+              <MonitorPlay className="w-4 h-4" />
+              {photo.slideshow ? "In slideshow" : "Add to slideshow"}
+            </button>
           </div>
 
           {photo.description && (

@@ -621,6 +621,7 @@ export default function GalleryPage() {
             )
           }
           onRate={ratePhoto}
+          onToggleSlideshow={toggleSlideshow}
         />
       )}
 
