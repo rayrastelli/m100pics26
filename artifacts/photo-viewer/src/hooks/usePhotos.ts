@@ -224,13 +224,23 @@ export function usePhotos() {
   const updateTags = useCallback(
     async (photoId: string, tags: string[]): Promise<{ error: string | null }> => {
       setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, tags } : p)));
-      try {
-        const { error: dbErr } = await supabase.from("photos").update({ tags }).eq("id", photoId);
-        if (dbErr) { await fetchPhotos(); throw dbErr; }
-        return { error: null };
-      } catch (err: unknown) {
-        return { error: err instanceof Error ? err.message : "Update failed" };
+      const { error: dbErr, data } = await supabase
+        .from("photos")
+        .update({ tags })
+        .eq("id", photoId)
+        .select("id, tags");
+      console.log("[updateTags] response:", { photoId, tags, data, dbErr });
+      if (dbErr) {
+        console.error("[updateTags] DB error:", dbErr.code, dbErr.message, dbErr.details, dbErr.hint);
+        await fetchPhotos();
+        return { error: `${dbErr.message}${dbErr.hint ? ` — ${dbErr.hint}` : ""}` };
       }
+      if (!data || data.length === 0) {
+        console.warn("[updateTags] 0 rows updated — RLS likely blocking the update");
+        await fetchPhotos();
+        return { error: "Update blocked — you may not have permission to tag this photo (RLS policy). Run migration 006 in Supabase." };
+      }
+      return { error: null };
     },
     [fetchPhotos]
   );
