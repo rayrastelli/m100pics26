@@ -84,15 +84,25 @@ async function buildSignedUploadUrl(
 }
 
 // POST /api/storage/sign-upload
-// Body: { filename, contentType, userTag }
+// Body: { filename, contentType, userTag, variant?, baseId? }
+//   variant: "full" (default) | "thumb" | "med"
+//   baseId:  shared ID for all three variants of the same photo (client generates once)
 // Returns: { signedUrl, objectPath, publicUrl }
-// Client should PUT file bytes to signedUrl with Content-Type header set.
+// Client should PUT file/blob bytes to signedUrl with Content-Type header set.
 router.post("/storage/sign-upload", async (req, res) => {
   try {
-    const { filename, contentType, userTag } = req.body as {
+    const {
+      filename,
+      contentType,
+      userTag,
+      variant = "full",
+      baseId,
+    } = req.body as {
       filename?: string;
       contentType?: string;
       userTag?: string;
+      variant?: "full" | "thumb" | "med";
+      baseId?: string;
     };
 
     if (!filename || !contentType || !userTag) {
@@ -100,11 +110,24 @@ router.post("/storage/sign-upload", async (req, res) => {
       return;
     }
 
-    const ext = (filename.split(".").pop() ?? "jpg").toLowerCase();
-    const safeName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const objectPath = `${BASE_FOLDER}/${userTag}/${safeName}`;
+    // For thumb/med we always output JPEG; for full use the original extension.
+    const ext = variant === "full"
+      ? (filename.split(".").pop() ?? "jpg").toLowerCase()
+      : "jpg";
 
-    const signedUrl = await buildSignedUploadUrl(objectPath, contentType);
+    // Use the shared baseId (client-supplied) so all variants share a root name,
+    // or generate a fresh one for single-variant / legacy uploads.
+    const id = baseId ?? `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const safeName = `${id}.${ext}`;
+
+    // Path prefix per variant
+    const prefix = variant === "full" ? "" : `${variant}_`;
+    const objectPath = `${BASE_FOLDER}/${userTag}/${prefix}${safeName}`;
+
+    // For thumb/med the actual upload content-type will be image/jpeg
+    const uploadContentType = variant === "full" ? contentType : "image/jpeg";
+
+    const signedUrl = await buildSignedUploadUrl(objectPath, uploadContentType);
     const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${objectPath}`;
 
     res.json({ signedUrl, objectPath, publicUrl });

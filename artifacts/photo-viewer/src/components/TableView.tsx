@@ -587,9 +587,9 @@ export function TableView({
                     {/* Thumbnail */}
                     <td className="py-1.5 pr-2">
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
-                        {photo.url ? (
+                        {(photo.thumb_url ?? photo.url) ? (
                           <img
-                            src={photo.url}
+                            src={photo.thumb_url ?? photo.url}
                             alt={photo.title}
                             className="w-full h-full object-cover"
                             loading="lazy"

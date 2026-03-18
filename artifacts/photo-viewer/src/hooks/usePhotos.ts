@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./useAuth";
-import { uploadToGcs, deleteFromGcs, gcsPublicUrl, isGcsPath } from "@/lib/gcs";
+import { uploadPhotoVariants, deleteFromGcs, gcsPublicUrl, isGcsPath } from "@/lib/gcs";
 
 export interface Photo {
   id: string;
@@ -10,6 +10,8 @@ export interface Photo {
   title: string;
   description: string | null;
   storage_path: string;   // GCS: "pictureapp/<tag>/<file>", Supabase (legacy): "<uuid>/<file>"
+  thumb_path: string | null;
+  med_path: string | null;
   filename: string;
   mime_type: string;
   size: number;
@@ -20,7 +22,9 @@ export interface Photo {
   active: boolean;
   tags: string[];
   created_at: string;
-  url?: string;           // Derived: GCS public URL or Supabase Storage URL (legacy)
+  url?: string;       // Derived: full-resolution (GCS or legacy Supabase)
+  thumb_url?: string; // Derived: 400px thumbnail
+  med_url?: string;   // Derived: 1200px medium
 }
 
 const SUPABASE_BUCKET = "band-pics";
@@ -56,6 +60,8 @@ export function usePhotos() {
         ...photo,
         tags: photo.tags ?? [],
         url: resolvePhotoUrl(photo.storage_path),
+        thumb_url: photo.thumb_path ? gcsPublicUrl(photo.thumb_path) : undefined,
+        med_url: photo.med_path ? gcsPublicUrl(photo.med_path) : undefined,
       }));
 
       setPhotos(photosWithUrls);
@@ -76,14 +82,14 @@ export function usePhotos() {
       if (!profile?.user_tag) return { error: "User tag not set — please set up your profile first" };
 
       try {
-        // 1. Upload to GCS via signed URL
-        const { objectPath, publicUrl, error: uploadErr } = await uploadToGcs(file, profile.user_tag);
-        if (uploadErr) return { error: uploadErr };
+        // 1. Upload full + thumb + med to GCS (all in parallel)
+        const upload = await uploadPhotoVariants(file, profile.user_tag);
+        if (upload.error) return { error: upload.error };
 
-        // 2. Get image dimensions
+        // 2. Get image dimensions from the original file
         const dimensions = await getImageDimensions(file);
 
-        // 3. Save metadata to Supabase DB (storage_path = GCS object path)
+        // 3. Save metadata to Supabase DB
         const autoTags = profile.user_tag ? [profile.user_tag] : [];
 
         const { error: dbErr } = await supabase.from("photos").insert({
@@ -91,7 +97,9 @@ export function usePhotos() {
           user_tag: profile.user_tag,
           title: title || file.name,
           description: description || null,
-          storage_path: objectPath,
+          storage_path: upload.fullPath,
+          thumb_path: upload.thumbPath,
+          med_path: upload.medPath,
           filename: file.name,
           mime_type: file.type,
           size: file.size,
@@ -102,34 +110,16 @@ export function usePhotos() {
         });
 
         if (dbErr) {
-          // Best-effort cleanup: delete the GCS object
-          await deleteFromGcs(objectPath!).catch(() => {});
+          // Best-effort cleanup of all three GCS objects
+          await Promise.allSettled([
+            deleteFromGcs(upload.fullPath),
+            deleteFromGcs(upload.thumbPath),
+            deleteFromGcs(upload.medPath),
+          ]);
           throw dbErr;
         }
 
-        // Optimistically add to state
-        const newPhoto: Photo = {
-          id: "",
-          user_id: user.id,
-          user_tag: profile.user_tag,
-          title: title || file.name,
-          description: description || null,
-          storage_path: objectPath!,
-          filename: file.name,
-          mime_type: file.type,
-          size: file.size,
-          width: dimensions?.width ?? null,
-          height: dimensions?.height ?? null,
-          rating: null,
-          slideshow: false,
-          active: true,
-          tags: autoTags,
-          created_at: new Date().toISOString(),
-          url: publicUrl!,
-        };
-        setPhotos((prev) => [newPhoto, ...prev]);
-
-        // Refresh to get the real DB row (with id, etc.)
+        // Refresh to get the real DB row (with id, timestamps, etc.)
         await fetchPhotos();
         return { error: null };
       } catch (err: unknown) {
@@ -142,18 +132,22 @@ export function usePhotos() {
   const deletePhoto = useCallback(
     async (photo: Photo): Promise<{ error: string | null }> => {
       try {
-        // 1. Delete from storage (GCS or legacy Supabase)
         if (isGcsPath(photo.storage_path)) {
-          const { error: gcsErr } = await deleteFromGcs(photo.storage_path);
-          if (gcsErr) throw new Error(gcsErr);
+          // Delete all three variants in parallel (ignore 404s)
+          await Promise.allSettled([
+            deleteFromGcs(photo.storage_path),
+            photo.thumb_path ? deleteFromGcs(photo.thumb_path) : Promise.resolve(),
+            photo.med_path ? deleteFromGcs(photo.med_path) : Promise.resolve(),
+          ]);
         } else {
+          // Legacy Supabase Storage
           const { error: storageErr } = await supabase.storage
             .from(SUPABASE_BUCKET)
             .remove([photo.storage_path]);
           if (storageErr) throw storageErr;
         }
 
-        // 2. Delete metadata from Supabase DB
+        // Delete metadata from Supabase DB
         const { error: dbErr } = await supabase.from("photos").delete().eq("id", photo.id);
         if (dbErr) throw dbErr;
 

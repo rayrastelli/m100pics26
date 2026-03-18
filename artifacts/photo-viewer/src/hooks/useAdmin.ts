@@ -18,6 +18,8 @@ export interface AdminPhoto {
   title: string;
   description: string | null;
   storage_path: string;
+  thumb_path: string | null;
+  med_path: string | null;
   filename: string;
   mime_type: string;
   size: number;
@@ -29,6 +31,8 @@ export interface AdminPhoto {
   tags: string[];
   created_at: string;
   url?: string;
+  thumb_url?: string;
+  med_url?: string;
   owner_email?: string;
 }
 
@@ -114,6 +118,8 @@ export function useAdmin() {
       ...photo,
       tags: photo.tags ?? [],
       url: resolvePhotoUrl(photo.storage_path),
+      thumb_url: photo.thumb_path ? gcsPublicUrl(photo.thumb_path) : undefined,
+      med_url: photo.med_path ? gcsPublicUrl(photo.med_path) : undefined,
       owner_email: profileMap.get(photo.user_id) ?? "Unknown",
     }));
 
@@ -124,8 +130,12 @@ export function useAdmin() {
   const deleteAnyPhoto = useCallback(async (photo: AdminPhoto) => {
     // Delete from storage (GCS or legacy Supabase)
     if (isGcsPath(photo.storage_path)) {
-      const { error: gcsErr } = await deleteFromGcs(photo.storage_path);
-      if (gcsErr) return { error: gcsErr };
+      // Delete all three variants (full + thumb + med) in parallel; ignore 404s
+      await Promise.allSettled([
+        deleteFromGcs(photo.storage_path),
+        photo.thumb_path ? deleteFromGcs(photo.thumb_path) : Promise.resolve(),
+        photo.med_path ? deleteFromGcs(photo.med_path) : Promise.resolve(),
+      ]);
     } else {
       const { error: storageErr } = await supabase.storage
         .from(SUPABASE_BUCKET)
