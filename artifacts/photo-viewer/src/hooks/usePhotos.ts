@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./useAuth";
-import { uploadPhotoVariants, deleteFromGcs, gcsPublicUrl, isGcsPath } from "@/lib/gcs";
+import { uploadPhotoVariants, uploadToGcs, deleteFromGcs, gcsPublicUrl, isGcsPath } from "@/lib/gcs";
 
 export interface Photo {
   id: string;
@@ -82,24 +82,43 @@ export function usePhotos() {
       if (!profile?.user_tag) return { error: "User tag not set — please set up your profile first" };
 
       try {
-        // 1. Upload full + thumb + med to GCS (all in parallel)
-        const upload = await uploadPhotoVariants(file, profile.user_tag);
-        if (upload.error) return { error: upload.error };
+        // 1. Attempt multi-variant upload (full + thumb + med).
+        //    If resizing or the extra uploads fail for any reason, fall back
+        //    to a plain single-file upload so the photo is never lost.
+        let fullPath: string;
+        let thumbPath: string | null = null;
+        let medPath: string | null = null;
+        const pathsToClean: string[] = [];
+
+        const variantResult = await uploadPhotoVariants(file, profile.user_tag);
+        if (!variantResult.error) {
+          fullPath = variantResult.fullPath;
+          thumbPath = variantResult.thumbPath;
+          medPath = variantResult.medPath;
+          pathsToClean.push(fullPath, thumbPath, medPath);
+        } else {
+          // Variant upload failed — fall back to full-res only
+          console.warn("[upload] variant upload failed, falling back:", variantResult.error);
+          const single = await uploadToGcs(file, profile.user_tag);
+          if (single.error) return { error: single.error };
+          fullPath = single.objectPath!;
+          pathsToClean.push(fullPath);
+        }
 
         // 2. Get image dimensions from the original file
         const dimensions = await getImageDimensions(file);
 
-        // 3. Save metadata to Supabase DB
+        // 3. Save metadata to Supabase DB.
+        //    Only include thumb_path / med_path when they were actually created —
+        //    this keeps the INSERT compatible even if migration 012 hasn't run yet.
         const autoTags = profile.user_tag ? [profile.user_tag] : [];
 
-        const { error: dbErr } = await supabase.from("photos").insert({
+        const insertData: Record<string, unknown> = {
           user_id: user.id,
           user_tag: profile.user_tag,
           title: title || file.name,
           description: description || null,
-          storage_path: upload.fullPath,
-          thumb_path: upload.thumbPath,
-          med_path: upload.medPath,
+          storage_path: fullPath,
           filename: file.name,
           mime_type: file.type,
           size: file.size,
@@ -107,15 +126,15 @@ export function usePhotos() {
           height: dimensions?.height ?? null,
           rating: null,
           tags: autoTags,
-        });
+        };
+        if (thumbPath) insertData.thumb_path = thumbPath;
+        if (medPath) insertData.med_path = medPath;
+
+        const { error: dbErr } = await supabase.from("photos").insert(insertData);
 
         if (dbErr) {
-          // Best-effort cleanup of all three GCS objects
-          await Promise.allSettled([
-            deleteFromGcs(upload.fullPath),
-            deleteFromGcs(upload.thumbPath),
-            deleteFromGcs(upload.medPath),
-          ]);
+          // Best-effort cleanup of all uploaded GCS objects
+          await Promise.allSettled(pathsToClean.map((p) => deleteFromGcs(p)));
           throw dbErr;
         }
 
