@@ -1,7 +1,7 @@
 // GCS storage helpers — talk to the api-server for signed URLs and deletes.
-// The api-server is mounted at /api-server on the same Replit domain.
+// The api-server is proxied at /api/* on the same domain (no prefix needed).
 
-const API_BASE = "/api-server";
+const API_BASE = "";
 
 const BUCKET = "boosterpics2026";
 
