@@ -13,6 +13,7 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import { usePhotos, Photo } from "@/hooks/usePhotos";
+import { useTags } from "@/hooks/useTags";
 import { PhotoCard } from "@/components/PhotoCard";
 import { Lightbox } from "@/components/Lightbox";
 import { UploadDialog } from "@/components/UploadDialog";
@@ -321,6 +322,7 @@ export default function GalleryPage() {
     toggleActive,
     updateTags,
   } = usePhotos();
+  const { tagNames: masterTagNames } = useTags();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [sort, setSort] = useState<SortKey>("newest");
@@ -336,13 +338,12 @@ export default function GalleryPage() {
     fetchPhotos();
   }, [fetchPhotos]);
 
+  // Master tag list from Settings, supplemented by any tags already on photos
   const allTags = useMemo(() => {
-    const set = new Set<string>();
-    photos.forEach((p) => {
-      (p.tags ?? []).forEach((t) => set.add(t));
-    });
+    const set = new Set<string>(masterTagNames);
+    photos.forEach((p) => (p.tags ?? []).forEach((t) => set.add(t)));
     return [...set].sort((a, b) => a.localeCompare(b));
-  }, [photos]);
+  }, [masterTagNames, photos]);
 
   const filteredPhotos = useMemo(
     () =>

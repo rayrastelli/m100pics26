@@ -4,10 +4,11 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import AuthPage from "@/pages/AuthPage";
 import GalleryPage from "@/pages/GalleryPage";
 import AdminPage from "@/pages/AdminPage";
+import SettingsPage from "@/pages/SettingsPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import { TopNav } from "@/components/TopNav";
 
-type View = "gallery" | "admin";
+type View = "gallery" | "admin" | "settings";
 
 function AppContent() {
   const { user, profile, loading, isAdmin } = useAuth();
@@ -32,6 +33,8 @@ function AppContent() {
       <TopNav activeView={safeView} onNavigate={setView} />
       {safeView === "admin" ? (
         <AdminPage />
+      ) : safeView === "settings" ? (
+        <SettingsPage />
       ) : (
         <GalleryPage />
       )}
