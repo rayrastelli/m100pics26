@@ -1,11 +1,13 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "./useAuth";
+import { gcsPublicUrl, isGcsPath, deleteFromGcs } from "@/lib/gcs";
 
-const STORAGE_BUCKET = "band-pics";
+const SUPABASE_BUCKET = "band-pics";
 
-function supabasePublicUrl(storagePath: string): string {
-  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
+function resolvePhotoUrl(storagePath: string): string {
+  if (isGcsPath(storagePath)) return gcsPublicUrl(storagePath);
+  const { data } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath);
   return data.publicUrl;
 }
 
@@ -111,7 +113,7 @@ export function useAdmin() {
     const photosWithUrls = (photos ?? []).map((photo: AdminPhoto) => ({
       ...photo,
       tags: photo.tags ?? [],
-      url: supabasePublicUrl(photo.storage_path),
+      url: resolvePhotoUrl(photo.storage_path),
       owner_email: profileMap.get(photo.user_id) ?? "Unknown",
     }));
 
@@ -120,11 +122,16 @@ export function useAdmin() {
   }, []);
 
   const deleteAnyPhoto = useCallback(async (photo: AdminPhoto) => {
-    const { error: storageErr } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .remove([photo.storage_path]);
-
-    if (storageErr) return { error: storageErr.message };
+    // Delete from storage (GCS or legacy Supabase)
+    if (isGcsPath(photo.storage_path)) {
+      const { error: gcsErr } = await deleteFromGcs(photo.storage_path);
+      if (gcsErr) return { error: gcsErr };
+    } else {
+      const { error: storageErr } = await supabase.storage
+        .from(SUPABASE_BUCKET)
+        .remove([photo.storage_path]);
+      if (storageErr) return { error: storageErr.message };
+    }
 
     const { error: dbErr } = await supabase.from("photos").delete().eq("id", photo.id);
     if (dbErr) return { error: dbErr.message };

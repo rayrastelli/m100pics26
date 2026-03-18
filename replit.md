@@ -6,14 +6,18 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Photo Viewer App (`artifacts/photo-viewer`)
 
-React + Vite SPA using Supabase for auth and storage. No backend needed.
+React + Vite SPA using Supabase for auth/DB and GCS for photo storage.
 
 - **Auth**: Supabase email/password auth via `@supabase/supabase-js`
-- **Storage**: Supabase Storage bucket named `photos`
-- **Database**: Supabase Postgres table `photos` with RLS
+- **Storage**: Google Cloud Storage bucket `boosterpics2026`, folder `pictureapp/<user_tag>/`
+  - Upload: photo-viewer calls api-server `/api-server/api/storage/sign-upload` for a signed URL, then PUTs directly to GCS
+  - Delete: photo-viewer calls api-server `/api-server/api/storage/object`
+  - Legacy photos (Supabase Storage paths without `pictureapp/` prefix) still display correctly
+- **Database**: Supabase Postgres (no RLS) — tables: `photos`, `profiles`, `tag_definitions`
+- **Tags**: `photos.tags text[]` updated via `update_photo_tags(uuid, text[])` RPC (bypasses schema cache)
 - **Env vars**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-- **Hosting**: Built as a static SPA, deployable to Hostinger
-- **Setup SQL**: `artifacts/photo-viewer/SUPABASE_SETUP.sql` — must be run once in Supabase SQL Editor
+- **GCS env**: `GCS_SERVICE_ACCOUNT_KEY`, `GCS_BUCKET_NAME=boosterpics2026` (on api-server)
+- **Migrations**: run `artifacts/photo-viewer/migrations/` in order (001→011) in Supabase SQL Editor
 
 ## Stack
 

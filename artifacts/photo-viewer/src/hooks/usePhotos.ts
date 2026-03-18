@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./useAuth";
+import { uploadToGcs, deleteFromGcs, gcsPublicUrl, isGcsPath } from "@/lib/gcs";
 
 export interface Photo {
   id: string;
@@ -8,7 +9,7 @@ export interface Photo {
   user_tag: string | null;
   title: string;
   description: string | null;
-  storage_path: string;   // Supabase Storage path: <user_id>/<filename>
+  storage_path: string;   // GCS: "pictureapp/<tag>/<file>", Supabase (legacy): "<uuid>/<file>"
   filename: string;
   mime_type: string;
   size: number;
@@ -17,15 +18,19 @@ export interface Photo {
   rating: number | null;
   slideshow: boolean;
   active: boolean;
-  tags: string[];         // Flexible labels: names, groups, etc.
+  tags: string[];
   created_at: string;
-  url?: string;           // Derived: public Supabase Storage URL
+  url?: string;           // Derived: GCS public URL or Supabase Storage URL (legacy)
 }
 
-const STORAGE_BUCKET = "band-pics";
+const SUPABASE_BUCKET = "band-pics";
 
-function supabasePublicUrl(storagePath: string): string {
-  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
+function resolvePhotoUrl(storagePath: string): string {
+  if (isGcsPath(storagePath)) {
+    return gcsPublicUrl(storagePath);
+  }
+  // Legacy: photo lives in Supabase Storage
+  const { data } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath);
   return data.publicUrl;
 }
 
@@ -49,7 +54,8 @@ export function usePhotos() {
 
       const photosWithUrls = (data ?? []).map((photo: Photo) => ({
         ...photo,
-        url: supabasePublicUrl(photo.storage_path),
+        tags: photo.tags ?? [],
+        url: resolvePhotoUrl(photo.storage_path),
       }));
 
       setPhotos(photosWithUrls);
@@ -70,26 +76,14 @@ export function usePhotos() {
       if (!profile?.user_tag) return { error: "User tag not set — please set up your profile first" };
 
       try {
-        // 1. Build a unique storage path: <user_id>/<timestamp>_<filename>
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const storagePath = `${user.id}/${Date.now()}_${safeName}`;
+        // 1. Upload to GCS via signed URL
+        const { objectPath, publicUrl, error: uploadErr } = await uploadToGcs(file, profile.user_tag);
+        if (uploadErr) return { error: uploadErr };
 
-        // 2. Upload directly to Supabase Storage
-        const { error: uploadErr } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .upload(storagePath, file, {
-            contentType: file.type,
-            upsert: false,
-          });
-
-        if (uploadErr) throw uploadErr;
-
-        const publicUrl = supabasePublicUrl(storagePath);
-
-        // 3. Get image dimensions
+        // 2. Get image dimensions
         const dimensions = await getImageDimensions(file);
 
-        // 4. Save metadata to Supabase DB
+        // 3. Save metadata to Supabase DB (storage_path = GCS object path)
         const autoTags = profile.user_tag ? [profile.user_tag] : [];
 
         const { error: dbErr } = await supabase.from("photos").insert({
@@ -97,7 +91,7 @@ export function usePhotos() {
           user_tag: profile.user_tag,
           title: title || file.name,
           description: description || null,
-          storage_path: storagePath,
+          storage_path: objectPath,
           filename: file.name,
           mime_type: file.type,
           size: file.size,
@@ -108,19 +102,19 @@ export function usePhotos() {
         });
 
         if (dbErr) {
-          // Best-effort cleanup: remove the uploaded file
-          await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]).catch(() => {});
+          // Best-effort cleanup: delete the GCS object
+          await deleteFromGcs(objectPath!).catch(() => {});
           throw dbErr;
         }
 
-        // Optimistically add the new photo to state
+        // Optimistically add to state
         const newPhoto: Photo = {
           id: "",
           user_id: user.id,
           user_tag: profile.user_tag,
           title: title || file.name,
           description: description || null,
-          storage_path: storagePath,
+          storage_path: objectPath!,
           filename: file.name,
           mime_type: file.type,
           size: file.size,
@@ -131,7 +125,7 @@ export function usePhotos() {
           active: true,
           tags: autoTags,
           created_at: new Date().toISOString(),
-          url: publicUrl,
+          url: publicUrl!,
         };
         setPhotos((prev) => [newPhoto, ...prev]);
 
@@ -148,18 +142,19 @@ export function usePhotos() {
   const deletePhoto = useCallback(
     async (photo: Photo): Promise<{ error: string | null }> => {
       try {
-        // 1. Delete from Supabase Storage
-        const { error: storageErr } = await supabase.storage
-          .from(STORAGE_BUCKET)
-          .remove([photo.storage_path]);
-
-        if (storageErr) throw storageErr;
+        // 1. Delete from storage (GCS or legacy Supabase)
+        if (isGcsPath(photo.storage_path)) {
+          const { error: gcsErr } = await deleteFromGcs(photo.storage_path);
+          if (gcsErr) throw new Error(gcsErr);
+        } else {
+          const { error: storageErr } = await supabase.storage
+            .from(SUPABASE_BUCKET)
+            .remove([photo.storage_path]);
+          if (storageErr) throw storageErr;
+        }
 
         // 2. Delete metadata from Supabase DB
-        const { error: dbErr } = await supabase
-          .from("photos")
-          .delete()
-          .eq("id", photo.id);
+        const { error: dbErr } = await supabase.from("photos").delete().eq("id", photo.id);
         if (dbErr) throw dbErr;
 
         setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
@@ -173,18 +168,10 @@ export function usePhotos() {
 
   const ratePhoto = useCallback(
     async (photoId: string, rating: number | null): Promise<{ error: string | null }> => {
-      setPhotos((prev) =>
-        prev.map((p) => (p.id === photoId ? { ...p, rating } : p))
-      );
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, rating } : p)));
       try {
-        const { error: dbErr } = await supabase
-          .from("photos")
-          .update({ rating })
-          .eq("id", photoId);
-        if (dbErr) {
-          await fetchPhotos();
-          throw dbErr;
-        }
+        const { error: dbErr } = await supabase.from("photos").update({ rating }).eq("id", photoId);
+        if (dbErr) { await fetchPhotos(); throw dbErr; }
         return { error: null };
       } catch (err: unknown) {
         return { error: err instanceof Error ? err.message : "Rating failed" };
@@ -240,20 +227,12 @@ export function usePhotos() {
   return { photos, loading, error, fetchPhotos, uploadPhoto, deletePhoto, ratePhoto, toggleSlideshow, toggleActive, updateTags };
 }
 
-async function getImageDimensions(
-  file: File
-): Promise<{ width: number; height: number } | null> {
+async function getImageDimensions(file: File): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(null);
-    };
+    img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
     img.src = url;
   });
 }
