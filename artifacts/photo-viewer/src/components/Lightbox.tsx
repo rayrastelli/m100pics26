@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, HardDrive, Maximize, FileImage, MonitorPlay } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, ChevronLeft, ChevronRight, HardDrive, Maximize, FileImage, MonitorPlay, AlertCircle } from "lucide-react";
 import { Photo } from "@/hooks/usePhotos";
 import { RatingPicker } from "@/components/RatingPicker";
 import { TagEditor } from "@/components/TagEditor";
@@ -22,6 +22,19 @@ export function Lightbox({
   photos, index, allTags, onClose, onPrev, onNext, onRate, onToggleSlideshow, onUpdateTags,
 }: LightboxProps) {
   const photo = photos[index];
+  const [tagError, setTagError] = useState<string | null>(null);
+
+  const handleUpdateTags = async (id: string, tags: string[]) => {
+    setTagError(null);
+    const result = await onUpdateTags(id, tags) as { error?: string } | unknown;
+    const err = result && typeof result === "object" && "error" in result
+      ? (result as { error: string | null }).error
+      : null;
+    if (err) {
+      setTagError(err);
+      setTimeout(() => setTagError(null), 6000);
+    }
+  };
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -118,8 +131,14 @@ export function Lightbox({
             <TagEditor
               tags={photo.tags ?? []}
               allTags={allTags}
-              onChange={(tags) => onUpdateTags(photo.id, tags)}
+              onChange={(tags) => handleUpdateTags(photo.id, tags)}
             />
+            {tagError && (
+              <div className="mt-2 flex items-start gap-2 px-3 py-2 bg-red-900/40 border border-red-700/60 rounded-lg text-xs text-red-300">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <span>{tagError}</span>
+              </div>
+            )}
           </div>
 
           {/* Metadata */}
