@@ -11,6 +11,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { usePhotos, Photo } from "@/hooks/usePhotos";
 import { useTags } from "@/hooks/useTags";
@@ -18,7 +20,10 @@ import { PhotoCard } from "@/components/PhotoCard";
 import { Lightbox } from "@/components/Lightbox";
 import { UploadDialog } from "@/components/UploadDialog";
 import { EmptyState } from "@/components/EmptyState";
+import { TableView } from "@/components/TableView";
 import { cn } from "@/lib/utils";
+
+type ViewMode = "gallery" | "table";
 
 // ─── Sort ────────────────────────────────────────────────────────────────────
 
@@ -333,6 +338,7 @@ export default function GalleryPage() {
   const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [pageSize, setPageSize] = useState<number>(50);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [viewMode, setViewMode] = useState<ViewMode>("gallery");
 
   useEffect(() => {
     fetchPhotos();
@@ -456,6 +462,33 @@ export default function GalleryPage() {
                 </button>
               ))}
             </div>
+            {/* View toggle */}
+            <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setViewMode("gallery")}
+                title="Gallery view"
+                className={cn(
+                  "p-1.5 transition-colors",
+                  viewMode === "gallery"
+                    ? "bg-zinc-100 text-zinc-900"
+                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200",
+                )}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                title="Table view"
+                className={cn(
+                  "p-1.5 transition-colors",
+                  viewMode === "table"
+                    ? "bg-zinc-100 text-zinc-900"
+                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200",
+                )}
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <button
               onClick={() => setUploadOpen(true)}
               className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors"
@@ -526,8 +559,23 @@ export default function GalleryPage() {
         </div>
       )}
 
+      {/* ── Table view ── */}
+      {!loading && displayedPhotos.length > 0 && viewMode === "table" && (
+        <TableView
+          photos={displayedPhotos}
+          allTags={allTags}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={changePage}
+          onRate={ratePhoto}
+          onToggleActive={toggleActive}
+          onToggleSlideshow={toggleSlideshow}
+          onUpdateTags={updateTags}
+        />
+      )}
+
       {/* ── Grid ── */}
-      {!loading && displayedPhotos.length > 0 && (
+      {!loading && displayedPhotos.length > 0 && viewMode === "gallery" && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
           {displayedPhotos.map((photo, i) => (
             <PhotoCard
@@ -544,8 +592,8 @@ export default function GalleryPage() {
         </div>
       )}
 
-      {/* ── Pagination ── */}
-      {!loading && totalPages > 1 && (
+      {/* ── Pagination (gallery view only — table has its own) ── */}
+      {!loading && totalPages > 1 && viewMode === "gallery" && (
         <div className="flex items-center justify-center gap-2 mt-8">
           <button
             onClick={() => changePage(1)}
