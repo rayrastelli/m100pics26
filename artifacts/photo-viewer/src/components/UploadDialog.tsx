@@ -133,6 +133,19 @@ export function UploadDialog({ isOpen, onClose, allTags, onUpload }: UploadDialo
             </button>
           </div>
 
+          {/* Tags — outside the scrollable area so the dropdown isn't clipped */}
+          <div className="px-4 pt-3 pb-2 border-b border-zinc-800/60 flex-shrink-0">
+            <p className="text-xs font-medium text-zinc-500 mb-1.5">
+              Tags
+              <span className="ml-1.5 font-normal text-zinc-600">applied to all photos</span>
+            </p>
+            <TagEditor
+              tags={selectedTags}
+              allTags={allTags}
+              onChange={setSelectedTags}
+            />
+          </div>
+
           {/* Body */}
           <div className="flex-1 overflow-y-auto">
 
@@ -175,19 +188,6 @@ export function UploadDialog({ isOpen, onClose, allTags, onUpload }: UploadDialo
                   className="hidden"
                 />
               </div>
-            </div>
-
-            {/* Tags — always visible so you can set them before/after adding files */}
-            <div className="px-4 pt-3 pb-1">
-              <p className="text-xs font-medium text-zinc-500 mb-1.5">
-                Tags
-                <span className="ml-1.5 font-normal text-zinc-600">applied to all photos</span>
-              </p>
-              <TagEditor
-                tags={selectedTags}
-                allTags={allTags}
-                onChange={setSelectedTags}
-              />
             </div>
 
             {/* Queue list */}
