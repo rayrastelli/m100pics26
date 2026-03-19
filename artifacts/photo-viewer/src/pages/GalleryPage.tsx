@@ -27,6 +27,21 @@ import { TableView } from "@/components/TableView";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "gallery" | "table";
+type CardSize = "xs" | "sm" | "md" | "lg";
+
+const CARD_SIZES: { key: CardSize; label: string }[] = [
+  { key: "xs", label: "0.5×" },
+  { key: "sm", label: "1×" },
+  { key: "md", label: "2×" },
+  { key: "lg", label: "3×" },
+];
+
+const CARD_SIZE_GRID: Record<CardSize, string> = {
+  xs: "grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10",
+  sm: "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6",
+  md: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4",
+  lg: "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3",
+};
 
 // ─── Sort ────────────────────────────────────────────────────────────────────
 
@@ -343,6 +358,7 @@ export default function GalleryPage() {
   const [pageSize, setPageSize] = useState<number>(50);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [viewMode, setViewMode] = useState<ViewMode>("gallery");
+  const [cardSize, setCardSize] = useState<CardSize>("sm");
 
   useEffect(() => {
     fetchPhotos();
@@ -475,6 +491,26 @@ export default function GalleryPage() {
                 </button>
               ))}
             </div>
+            {/* Card size picker — gallery only */}
+            {viewMode === "gallery" && (
+              <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden text-xs">
+                {CARD_SIZES.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setCardSize(key)}
+                    className={cn(
+                      "px-2.5 py-1.5 transition-colors",
+                      cardSize === key
+                        ? "bg-zinc-100 text-zinc-900 font-semibold"
+                        : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* View toggle */}
             <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden">
               <button
@@ -599,7 +635,7 @@ export default function GalleryPage() {
 
       {/* ── Grid ── */}
       {displayedPhotos.length > 0 && viewMode === "gallery" && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+        <div className={cn("grid gap-2 sm:gap-3", CARD_SIZE_GRID[cardSize])}>
           {displayedPhotos.map((photo, i) => (
             <PhotoCard
               key={photo.id}
