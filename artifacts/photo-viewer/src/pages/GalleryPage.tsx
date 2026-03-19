@@ -13,6 +13,7 @@ import {
   ChevronsRight,
   LayoutGrid,
   List,
+  RefreshCw,
 } from "lucide-react";
 import { usePhotos, Photo } from "@/hooks/usePhotos";
 import { useTags } from "@/hooks/useTags";
@@ -490,6 +491,13 @@ export default function GalleryPage() {
               </button>
             </div>
             <button
+              onClick={() => fetchPhotos()}
+              title="Refresh gallery"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", loading && photos.length > 0 && "animate-spin")} />
+            </button>
+            <button
               onClick={() => setUploadOpen(true)}
               className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors"
             >
@@ -520,8 +528,8 @@ export default function GalleryPage() {
         </div>
       </div>
 
-      {/* ── Loading ── */}
-      {loading && (
+      {/* ── Loading spinner — only on initial load (no photos yet) ── */}
+      {loading && photos.length === 0 && (
         <div className="flex justify-center py-32">
           <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
         </div>
@@ -540,7 +548,7 @@ export default function GalleryPage() {
       )}
 
       {/* ── No results after filter ── */}
-      {!loading && photos.length > 0 && filteredPhotos.length === 0 && (
+      {photos.length > 0 && filteredPhotos.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="text-zinc-500 text-sm">
             No photos match these filters.
@@ -560,7 +568,7 @@ export default function GalleryPage() {
       )}
 
       {/* ── Table view ── */}
-      {!loading && displayedPhotos.length > 0 && viewMode === "table" && (
+      {displayedPhotos.length > 0 && viewMode === "table" && (
         <TableView
           photos={displayedPhotos}
           allTags={allTags}
@@ -576,7 +584,7 @@ export default function GalleryPage() {
       )}
 
       {/* ── Grid ── */}
-      {!loading && displayedPhotos.length > 0 && viewMode === "gallery" && (
+      {displayedPhotos.length > 0 && viewMode === "gallery" && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
           {displayedPhotos.map((photo, i) => (
             <PhotoCard
@@ -594,7 +602,7 @@ export default function GalleryPage() {
       )}
 
       {/* ── Pagination (gallery view only — table has its own) ── */}
-      {!loading && totalPages > 1 && viewMode === "gallery" && (
+      {totalPages > 1 && viewMode === "gallery" && (
         <div className="flex items-center justify-center gap-2 mt-8">
           <button
             onClick={() => changePage(1)}

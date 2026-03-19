@@ -41,6 +41,7 @@ export function Lightbox({
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft") onPrev();
       if (e.key === "ArrowRight") onNext();
+      
     };
     document.addEventListener("keydown", handleKey);
     document.body.style.overflow = "hidden";
