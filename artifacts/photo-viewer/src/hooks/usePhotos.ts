@@ -76,7 +76,7 @@ export function usePhotos() {
     async (
       file: File,
       title: string,
-      description?: string
+      tags?: string[]
     ): Promise<{ error: string | null }> => {
       if (!user) return { error: "Not authenticated" };
       if (!profile?.user_tag) return { error: "User tag not set — please set up your profile first" };
@@ -111,13 +111,15 @@ export function usePhotos() {
         // 3. Save metadata to Supabase DB.
         //    Only include thumb_path / med_path when they were actually created —
         //    this keeps the INSERT compatible even if migration 012 hasn't run yet.
+        // Merge the user's own tag with any tags chosen at upload time
         const autoTags = profile.user_tag ? [profile.user_tag] : [];
+        const mergedTags = [...new Set([...autoTags, ...(tags ?? [])])];
 
         const insertData: Record<string, unknown> = {
           user_id: user.id,
           user_tag: profile.user_tag,
           title: title || file.name,
-          description: description || null,
+          description: null,
           storage_path: fullPath,
           filename: file.name,
           mime_type: file.type,
@@ -125,7 +127,7 @@ export function usePhotos() {
           width: dimensions?.width ?? null,
           height: dimensions?.height ?? null,
           rating: null,
-          tags: autoTags,
+          tags: mergedTags,
         };
         if (thumbPath) insertData.thumb_path = thumbPath;
         if (medPath) insertData.med_path = medPath;

@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback } from "react";
 import { X, UploadCloud, Loader2, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TagEditor } from "@/components/TagEditor";
 
 interface UploadDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: (file: File, title: string, description?: string) => Promise<{ error: string | null }>;
+  allTags: string[];
+  onUpload: (file: File, title: string, tags: string[]) => Promise<{ error: string | null }>;
 }
 
 type FileStatus = "pending" | "uploading" | "done" | "error";
@@ -23,10 +25,11 @@ function makeId() {
   return Math.random().toString(36).slice(2);
 }
 
-export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
+export function UploadDialog({ isOpen, onClose, allTags, onUpload }: UploadDialogProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [queue, setQueue] = useState<QueuedFile[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback((files: FileList | File[]) => {
@@ -59,6 +62,7 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
       prev.forEach((f) => URL.revokeObjectURL(f.previewUrl));
       return [];
     });
+    setSelectedTags([]);
   };
 
   const handleClose = () => {
@@ -83,7 +87,7 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
     for (const item of pending) {
       setQueue((prev) => prev.map((f) => f.id === item.id ? { ...f, status: "uploading" } : f));
 
-      const { error } = await onUpload(item.file, item.title || "Untitled");
+      const { error } = await onUpload(item.file, item.title || "Untitled", selectedTags);
 
       setQueue((prev) =>
         prev.map((f) =>
@@ -171,6 +175,19 @@ export function UploadDialog({ isOpen, onClose, onUpload }: UploadDialogProps) {
                   className="hidden"
                 />
               </div>
+            </div>
+
+            {/* Tags — always visible so you can set them before/after adding files */}
+            <div className="px-4 pt-3 pb-1">
+              <p className="text-xs font-medium text-zinc-500 mb-1.5">
+                Tags
+                <span className="ml-1.5 font-normal text-zinc-600">applied to all photos</span>
+              </p>
+              <TagEditor
+                tags={selectedTags}
+                allTags={allTags}
+                onChange={setSelectedTags}
+              />
             </div>
 
             {/* Queue list */}

@@ -708,6 +708,7 @@ export default function GalleryPage() {
       <UploadDialog
         isOpen={uploadOpen}
         onClose={() => setUploadOpen(false)}
+        allTags={allTags}
         onUpload={uploadPhoto}
       />
     </main>
