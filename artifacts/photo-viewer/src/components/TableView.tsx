@@ -34,6 +34,7 @@ interface TableViewProps {
   onOpenPhoto: (index: number) => void;
   currentUserId?: string;
   onDelete?: (photo: Photo) => Promise<void>;
+  thumbSizeClass?: string;
 }
 
 // ─── Dot rating cell ──────────────────────────────────────────────────────────
@@ -423,6 +424,8 @@ function DeleteCell({ photo, onDelete }: { photo: Photo; onDelete: (photo: Photo
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  if (photo.active) return <span />;
+
   if (deleting) return <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500 mx-auto" />;
 
   if (confirming) {
@@ -538,6 +541,7 @@ export function TableView({
   onOpenPhoto,
   currentUserId,
   onDelete,
+  thumbSizeClass = "w-12 h-12",
 }: TableViewProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -649,7 +653,7 @@ export function TableView({
                     <td className="py-1.5 pr-2">
                       <button
                         onClick={() => onOpenPhoto(photoIndex)}
-                        className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0 block hover:ring-2 hover:ring-zinc-400 transition-all"
+                        className={cn(thumbSizeClass, "rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0 block hover:ring-2 hover:ring-zinc-400 transition-all")}
                       >
                         {(photo.thumb_url ?? photo.url) ? (
                           <img

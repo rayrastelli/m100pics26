@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Trash2, Loader2, AtSign, MonitorPlay, Eye, EyeOff } from "lucide-react";
+import { AtSign, MonitorPlay, Eye, EyeOff } from "lucide-react";
 import { Photo } from "@/hooks/usePhotos";
 import { RatingPicker } from "@/components/RatingPicker";
 import { cn } from "@/lib/utils";
@@ -8,25 +7,14 @@ interface PhotoCardProps {
   photo: Photo;
   index: number;
   onClick: () => void;
-  onDelete: (photo: Photo) => Promise<unknown>;
   onRate: (photoId: string, rating: number | null) => Promise<unknown>;
   onToggleSlideshow: (photoId: string, slideshow: boolean) => Promise<unknown>;
   onToggleActive: (photoId: string, active: boolean) => Promise<unknown>;
 }
 
 export function PhotoCard({
-  photo, index, onClick, onDelete, onRate, onToggleSlideshow, onToggleActive,
+  photo, index, onClick, onRate, onToggleSlideshow, onToggleActive,
 }: PhotoCardProps) {
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm("Delete this photo?")) return;
-    setIsDeleting(true);
-    await onDelete(photo);
-    setIsDeleting(false);
-  };
-
   const stopProp = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
@@ -51,7 +39,7 @@ export function PhotoCard({
       {/* Hover controls */}
       <div className="absolute inset-0 p-3 flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
 
-        {/* Top row: status toggles (left) + delete (right) */}
+        {/* Top row: status toggles */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1" onClick={stopProp}>
             {/* Slideshow toggle */}
@@ -82,20 +70,6 @@ export function PhotoCard({
               {photo.active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
             </button>
           </div>
-
-          {/* Delete */}
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="p-2 bg-black/60 hover:bg-red-600 text-white rounded-full backdrop-blur-md transition-colors disabled:opacity-50"
-            title="Delete photo"
-          >
-            {isDeleting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5" />
-            )}
-          </button>
         </div>
 
         {/* Bottom row: rating + title + user tag */}

@@ -43,6 +43,22 @@ const CARD_SIZE_GRID: Record<CardSize, string> = {
   lg: "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3",
 };
 
+type ThumbSize = "default" | "1x" | "2x" | "3x";
+
+const TABLE_THUMB_SIZES: { key: ThumbSize; label: string }[] = [
+  { key: "default", label: "Default" },
+  { key: "1x", label: "1×" },
+  { key: "2x", label: "2×" },
+  { key: "3x", label: "3×" },
+];
+
+const TABLE_THUMB_CLASS: Record<ThumbSize, string> = {
+  default: "w-12 h-12",
+  "1x": "w-20 h-20",
+  "2x": "w-32 h-32",
+  "3x": "w-40 h-40",
+};
+
 // ─── Sort ────────────────────────────────────────────────────────────────────
 
 type SortKey = "newest" | "oldest" | "best" | "worst" | "title-az" | "title-za";
@@ -359,6 +375,7 @@ export default function GalleryPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [viewMode, setViewMode] = useState<ViewMode>("gallery");
   const [cardSize, setCardSize] = useState<CardSize>("sm");
+  const [tableThumbSize, setTableThumbSize] = useState<ThumbSize>("default");
 
   useEffect(() => {
     fetchPhotos();
@@ -491,6 +508,26 @@ export default function GalleryPage() {
                 </button>
               ))}
             </div>
+            {/* Table thumb size picker — table only */}
+            {viewMode === "table" && (
+              <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden text-xs">
+                {TABLE_THUMB_SIZES.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setTableThumbSize(key)}
+                    className={cn(
+                      "px-2.5 py-1.5 transition-colors",
+                      tableThumbSize === key
+                        ? "bg-zinc-100 text-zinc-900 font-semibold"
+                        : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Card size picker — gallery only */}
             {viewMode === "gallery" && (
               <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden text-xs">
@@ -630,6 +667,7 @@ export default function GalleryPage() {
           onOpenPhoto={(i) => setLightboxIndex(i)}
           currentUserId={user?.id}
           onDelete={handleDelete}
+          thumbSizeClass={TABLE_THUMB_CLASS[tableThumbSize]}
         />
       )}
 
@@ -642,7 +680,6 @@ export default function GalleryPage() {
               photo={photo}
               index={i}
               onClick={() => setLightboxIndex(i)}
-              onDelete={handleDelete}
               onRate={ratePhoto}
               onToggleSlideshow={toggleSlideshow}
               onToggleActive={toggleActive}
