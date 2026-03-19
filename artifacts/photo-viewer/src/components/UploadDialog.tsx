@@ -244,7 +244,7 @@ export function UploadDialog({ isOpen, onClose, allTags, onUpload }: UploadDialo
                 <button
                   onClick={handleUploadAll}
                   disabled={pendingCount === 0 || isRunning}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-900 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-zinc-100 text-zinc-900 hover:bg-zinc-200 active:bg-zinc-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isRunning && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {isRunning

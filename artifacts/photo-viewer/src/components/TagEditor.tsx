@@ -68,8 +68,8 @@ export function TagEditor({ tags, allTags, onChange, className }: TagEditorProps
         className={cn(
           "flex flex-wrap gap-1.5 p-2 border rounded-xl cursor-text min-h-[42px] transition-colors",
           open
-            ? "bg-white/8 border-white/25"
-            : "bg-white/5 border-white/10 hover:border-white/20"
+            ? "bg-white/8 border-zinc-500"
+            : "bg-white/5 border-zinc-600 hover:border-zinc-500"
         )}
         onClick={() => { inputRef.current?.focus(); setOpen(true); }}
       >

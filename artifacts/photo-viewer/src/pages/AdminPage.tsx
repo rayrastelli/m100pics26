@@ -115,7 +115,7 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete }: UsersPanel
         <p className="text-sm text-zinc-400">{users.length} user{users.length !== 1 ? "s" : ""}</p>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors"
+          className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-zinc-200 active:bg-zinc-300 transition-colors"
         >
           <UserPlus className="w-4 h-4" /> Add User
         </button>
@@ -335,7 +335,7 @@ function CreateUserForm({ onSave, onCancel }: {
           Cancel
         </button>
         <button type="submit" disabled={saving}
-          className="flex items-center gap-2 px-4 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors disabled:opacity-50">
+          className="flex items-center gap-2 px-4 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-zinc-200 active:bg-zinc-300 transition-colors disabled:opacity-50">
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
           {saving ? "Creating…" : "Create User"}
         </button>

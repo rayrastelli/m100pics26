@@ -63,7 +63,7 @@ export default function ProfileSetupPage() {
             <button
               type="submit"
               disabled={saving || !preview}
-              className="w-full bg-zinc-100 text-zinc-900 font-medium py-2.5 rounded-lg text-sm hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-zinc-100 text-zinc-900 font-medium py-2.5 rounded-lg text-sm hover:bg-zinc-200 active:bg-zinc-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {saving ? "Saving…" : "Save user tag"}

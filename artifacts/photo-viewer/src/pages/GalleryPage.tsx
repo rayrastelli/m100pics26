@@ -499,7 +499,7 @@ export default function GalleryPage() {
             </button>
             <button
               onClick={() => setUploadOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors"
+              className="flex items-center gap-2 px-3.5 py-1.5 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-medium hover:bg-zinc-200 active:bg-zinc-300 transition-colors"
             >
               <Upload className="w-3.5 h-3.5" />
               Upload

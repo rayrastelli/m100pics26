@@ -16,7 +16,7 @@ export function EmptyState({ onUploadClick }: EmptyStateProps) {
       </p>
       <button
         onClick={onUploadClick}
-        className="px-6 py-2.5 bg-zinc-100 text-zinc-900 rounded-full text-sm font-medium hover:bg-white transition-colors shadow-lg"
+        className="px-6 py-2.5 bg-zinc-100 text-zinc-900 rounded-full text-sm font-medium hover:bg-zinc-200 active:bg-zinc-300 transition-colors shadow-lg"
       >
         Upload First Photo
       </button>
