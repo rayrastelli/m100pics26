@@ -6,6 +6,7 @@ import GalleryPage from "@/pages/GalleryPage";
 import AdminPage from "@/pages/AdminPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
+import PendingApprovalPage from "@/pages/PendingApprovalPage";
 import { TopNav } from "@/components/TopNav";
 
 type View = "gallery" | "admin" | "settings";
@@ -25,6 +26,8 @@ function AppContent() {
   if (!user) return <AuthPage />;
 
   if (!profile?.user_tag) return <ProfileSetupPage />;
+
+  if (profile.disabled && !isAdmin) return <PendingApprovalPage />;
 
   const safeView = view === "admin" && !isAdmin ? "gallery" : view;
 

@@ -8,6 +8,7 @@ export interface Profile {
   role: "user" | "admin";
   disabled: boolean;
   user_tag: string | null;
+  student_name: string | null;
   created_at: string;
 }
 
@@ -22,7 +23,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateUserTag: (tag: string) => Promise<{ error: string | null }>;
+  updateUserTag: (tag: string, studentName?: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -87,19 +88,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) await loadProfile(user.id);
   };
 
-  const updateUserTag = async (tag: string): Promise<{ error: string | null }> => {
+  const updateUserTag = async (tag: string, studentName?: string): Promise<{ error: string | null }> => {
     if (!user) return { error: "Not authenticated" };
     const clean = tag.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
     if (!clean) return { error: "Tag must contain letters, numbers, or underscores" };
+    const updates: Record<string, string> = { user_tag: clean };
+    if (studentName !== undefined) updates.student_name = studentName.trim();
     const { error } = await supabase
       .from("profiles")
-      .update({ user_tag: clean })
+      .update(updates)
       .eq("id", user.id);
     if (error) {
       if (error.code === "23505") return { error: `@${clean} is already taken` };
       return { error: error.message };
     }
-    setProfile((prev) => prev ? { ...prev, user_tag: clean } : prev);
+    setProfile((prev) => prev ? { ...prev, user_tag: clean, student_name: studentName?.trim() ?? prev.student_name } : prev);
     return { error: null };
   };
 

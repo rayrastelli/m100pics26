@@ -149,6 +149,7 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete }: UsersPanel
             <thead>
               <tr className="border-b border-zinc-800">
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Email</th>
+                <th className="text-left px-4 py-3 text-zinc-400 font-medium">Student</th>
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Role</th>
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Status</th>
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Joined</th>
@@ -159,6 +160,9 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete }: UsersPanel
               {users.map((u) => (
                 <tr key={u.id} className="border-b border-zinc-800/50 last:border-0 hover:bg-zinc-800/30 transition-colors">
                   <td className="px-4 py-3 text-zinc-200">{u.email}</td>
+                  <td className="px-4 py-3 text-zinc-300 text-xs">
+                    {u.student_name ?? <span className="text-zinc-600 italic">—</span>}
+                  </td>
                   <td className="px-4 py-3">
                     {editId === u.id ? (
                       <select
@@ -387,7 +391,7 @@ function PhotosPanel({ photos, loading, onDelete }: PhotosPanelProps) {
           {photos.map((photo, i) => (
             <div key={photo.id} className="group relative aspect-square bg-zinc-800 rounded-xl overflow-hidden">
               <img
-                src={photo.url} alt={photo.title}
+                src={photo.thumb_url ?? photo.url} alt={photo.title}
                 className="h-full w-full object-cover cursor-pointer transition-transform duration-500 group-hover:scale-105"
                 onClick={() => setLightboxIndex(i)}
                 loading="lazy"
