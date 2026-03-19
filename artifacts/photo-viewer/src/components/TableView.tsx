@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Trash2,
 } from "lucide-react";
 import { Photo } from "@/hooks/usePhotos";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,8 @@ interface TableViewProps {
   onToggleSlideshow: (photoId: string, slideshow: boolean) => Promise<{ error: string | null }>;
   onUpdateTags: (photoId: string, tags: string[]) => Promise<{ error: string | null }>;
   onOpenPhoto: (index: number) => void;
+  currentUserId?: string;
+  onDelete?: (photo: Photo) => Promise<void>;
 }
 
 // ─── Dot rating cell ──────────────────────────────────────────────────────────
@@ -414,6 +417,49 @@ function BulkBar({
   );
 }
 
+// ─── Delete cell (inline confirm) ─────────────────────────────────────────────
+
+function DeleteCell({ photo, onDelete }: { photo: Photo; onDelete: (photo: Photo) => Promise<void> }) {
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  if (deleting) return <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500 mx-auto" />;
+
+  if (confirming) {
+    return (
+      <div className="flex items-center justify-center gap-1">
+        <button
+          onClick={async () => {
+            setDeleting(true);
+            await onDelete(photo);
+          }}
+          className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+          title="Confirm delete"
+        >
+          Delete
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          className="p-0.5 rounded hover:bg-zinc-700 transition-colors text-zinc-500 hover:text-zinc-300"
+          title="Cancel"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      className="p-1.5 rounded-lg text-zinc-700 hover:text-red-400 hover:bg-red-400/10 transition-colors mx-auto block"
+      title="Delete photo"
+    >
+      <Trash2 className="w-3.5 h-3.5" />
+    </button>
+  );
+}
+
 // ─── Pagination (reusable) ────────────────────────────────────────────────────
 
 function Pagination({
@@ -490,6 +536,8 @@ export function TableView({
   onToggleSlideshow,
   onUpdateTags,
   onOpenPhoto,
+  currentUserId,
+  onDelete,
 }: TableViewProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -570,6 +618,7 @@ export function TableView({
                 <th className="px-3 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wide hidden lg:table-cell">Tags</th>
                 <th className="px-3 py-3 text-center text-xs font-medium text-zinc-500 uppercase tracking-wide w-12">Active</th>
                 <th className="px-3 py-3 text-center text-xs font-medium text-zinc-500 uppercase tracking-wide w-12">Show</th>
+                {onDelete && currentUserId && <th className="w-12" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
@@ -668,6 +717,17 @@ export function TableView({
                         onToggle={() => onToggleSlideshow(photo.id, !photo.slideshow)}
                       />
                     </td>
+
+                    {/* Delete — only for the photo's owner */}
+                    {onDelete && currentUserId && (
+                      <td className="pr-3 py-2.5 text-center">
+                        {photo.user_id === currentUserId ? (
+                          <DeleteCell photo={photo} onDelete={onDelete} />
+                        ) : (
+                          <span />
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}

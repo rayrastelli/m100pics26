@@ -5,6 +5,7 @@ import {
   Check,
   MonitorPlay,
   Eye,
+  EyeOff,
   Tag,
   X,
   ChevronLeft,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { usePhotos, Photo } from "@/hooks/usePhotos";
 import { useTags } from "@/hooks/useTags";
+import { useAuth } from "@/hooks/useAuth";
 import { PhotoCard } from "@/components/PhotoCard";
 import { Lightbox } from "@/components/Lightbox";
 import { UploadDialog } from "@/components/UploadDialog";
@@ -316,6 +318,7 @@ function Pill({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function GalleryPage() {
+  const { user } = useAuth();
   const {
     photos,
     loading,
@@ -411,6 +414,15 @@ export default function GalleryPage() {
               icon={<Eye className="w-3 h-3" />}
             >
               Active
+            </Pill>
+            <Pill
+              active={statusFilter === "inactive"}
+              onClick={() =>
+                setStatusFilter(statusFilter === "inactive" ? "all" : "inactive")
+              }
+              icon={<EyeOff className="w-3 h-3" />}
+            >
+              Inactive
             </Pill>
 
             {/* Divider */}
@@ -580,6 +592,8 @@ export default function GalleryPage() {
           onToggleSlideshow={toggleSlideshow}
           onUpdateTags={updateTags}
           onOpenPhoto={(i) => setLightboxIndex(i)}
+          currentUserId={user?.id}
+          onDelete={handleDelete}
         />
       )}
 
