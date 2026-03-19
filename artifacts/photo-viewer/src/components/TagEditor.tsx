@@ -98,7 +98,7 @@ export function TagEditor({ tags, allTags, onChange, className }: TagEditorProps
           onBlur={() => setTimeout(() => setOpen(false), 200)}
           onKeyDown={handleKey}
           placeholder={tags.length === 0 ? "Add tags…" : ""}
-          className="flex-1 min-w-[90px] bg-transparent text-sm text-white/80 placeholder:text-white/30 outline-none py-0.5"
+          className="flex-1 min-w-[90px] bg-transparent text-sm text-zinc-400 placeholder:text-zinc-600 outline-none py-0.5"
         />
       </div>
 
