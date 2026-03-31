@@ -19,6 +19,15 @@ interface SlideshowPhoto {
   med_url: string;
 }
 
+function suggestShowName(shows: Slideshow[]): string {
+  let max = 0;
+  for (const s of shows) {
+    const m = s.name.match(/^slideshow_(\d+)$/i);
+    if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
+  }
+  return `slideshow_${max + 1}`;
+}
+
 function resolveUrl(path: string): string {
   if (isGcsPath(path)) return gcsPublicUrl(path);
   const { data } = supabase.storage.from("band-pics").getPublicUrl(path);
@@ -332,7 +341,7 @@ export default function SlideshowPage() {
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
             <button
-              onClick={() => { setEditMode(true); setEditOrder(photos); setPlaying(false); }}
+              onClick={() => { setEditMode(true); setEditOrder(photos); setPlaying(false); setNewShowName(suggestShowName(shows)); }}
               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
               title="Manage shows"
             >
@@ -389,7 +398,7 @@ export default function SlideshowPage() {
             {/* Tabs */}
             <div className="flex border-b border-zinc-800 shrink-0">
               <TabBtn active={editTab === "shows"} onClick={() => setEditTab("shows")} icon={<FolderOpen className="w-3.5 h-3.5" />} label="Shows" />
-              <TabBtn active={editTab === "order"} onClick={() => setEditTab("order")} icon={<GripVertical className="w-3.5 h-3.5" />} label="Edit Order" />
+              <TabBtn active={editTab === "order"} onClick={() => { setEditTab("order"); setNewShowName((n) => n || suggestShowName(shows)); }} icon={<GripVertical className="w-3.5 h-3.5" />} label="Edit Order" />
             </div>
 
             {/* ── Shows tab ── */}
