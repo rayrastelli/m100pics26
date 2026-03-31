@@ -484,6 +484,13 @@ export default function SlideshowPage() {
                           <ChevronDown className="w-3.5 h-3.5" />
                         </button>
                       </div>
+                      <button
+                        onClick={() => removeFromOrder(i)}
+                        className="p-1 text-zinc-600 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors shrink-0"
+                        title="Remove from slideshow"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   ))}
                 </div>
