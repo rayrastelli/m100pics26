@@ -362,7 +362,7 @@ export default function SlideshowPage() {
               onClick={() => setAutoAdvance((a) => !a)}
               className={`relative w-9 h-5 rounded-full transition-colors ${autoAdvance ? "bg-emerald-500" : "bg-white/20"}`}
             >
-              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${autoAdvance ? "translate-x-4" : "translate-x-0.5"}`} />
+              <span className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${autoAdvance ? "translate-x-[16px]" : "translate-x-0"}`} />
             </button>
           </div>
 
