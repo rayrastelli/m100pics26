@@ -42,6 +42,20 @@ export function useAdmin() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photoStats, setPhotoStats] = useState<{ total: number; slideshow: number } | null>(null);
+
+  // ---- Photo stats ----
+
+  const fetchPhotoStats = useCallback(async () => {
+    const [totalRes, slideshowRes] = await Promise.all([
+      supabase.from("photos").select("*", { count: "exact", head: true }),
+      supabase.from("photos").select("*", { count: "exact", head: true }).eq("slideshow", true),
+    ]);
+    setPhotoStats({
+      total: totalRes.count ?? 0,
+      slideshow: slideshowRes.count ?? 0,
+    });
+  }, []);
 
   // ---- Users ----
 
@@ -159,9 +173,10 @@ export function useAdmin() {
   return {
     users, usersLoading,
     allPhotos, photosLoading,
+    photoStats,
     error,
     fetchUsers, createUser, updateUser, deleteUser,
     fetchAllPhotos, deleteAnyPhoto,
-    resetUserPassword,
+    resetUserPassword, fetchPhotoStats,
   };
 }

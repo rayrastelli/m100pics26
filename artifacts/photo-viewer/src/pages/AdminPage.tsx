@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Users, Images, Plus, Trash2, Edit2, X, Check,
+  Users, Images, Play, Plus, Trash2, Edit2, X, Check,
   ShieldCheck, ShieldOff, Loader2, UserPlus, Eye, EyeOff, KeyRound
 } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -14,15 +14,17 @@ export default function AdminPage() {
   const {
     users, usersLoading,
     allPhotos, photosLoading,
+    photoStats,
     error,
     fetchUsers, createUser, updateUser, deleteUser,
     fetchAllPhotos, deleteAnyPhoto,
-    resetUserPassword,
+    resetUserPassword, fetchPhotoStats,
   } = useAdmin();
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchPhotoStats();
+  }, [fetchUsers, fetchPhotoStats]);
 
   useEffect(() => {
     if (tab === "photos") fetchAllPhotos();
@@ -31,9 +33,25 @@ export default function AdminPage() {
   return (
     <div className="text-zinc-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-        <div className="flex gap-1 mb-6 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
-          <TabBtn active={tab === "users"} onClick={() => setTab("users")} icon={<Users className="w-4 h-4" />} label="Users" />
-          <TabBtn active={tab === "photos"} onClick={() => setTab("photos")} icon={<Images className="w-4 h-4" />} label="All Photos" />
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
+            <TabBtn active={tab === "users"} onClick={() => setTab("users")} icon={<Users className="w-4 h-4" />} label="Users" />
+            <TabBtn active={tab === "photos"} onClick={() => setTab("photos")} icon={<Images className="w-4 h-4" />} label="All Photos" />
+          </div>
+          {photoStats && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl">
+                <Images className="w-3.5 h-3.5 text-zinc-500" />
+                <span className="text-sm text-zinc-300 font-medium">{photoStats.total}</span>
+                <span className="text-xs text-zinc-500">total photos</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl">
+                <Play className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-sm text-zinc-300 font-medium">{photoStats.slideshow}</span>
+                <span className="text-xs text-zinc-500">in slideshow</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (
