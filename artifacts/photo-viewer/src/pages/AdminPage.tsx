@@ -1,30 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Users, Images, Play, Plus, Trash2, Edit2, X, Check,
-  ShieldCheck, ShieldOff, Loader2, UserPlus, Eye, EyeOff, KeyRound
+  ShieldCheck, ShieldOff, Loader2, UserPlus, Eye, EyeOff,
+  KeyRound, MoreHorizontal, ArrowRightLeft
 } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
-import { Profile } from "@/hooks/useAuth";
+import { Profile, useAuth } from "@/hooks/useAuth";
 import { formatBytes } from "@/lib/utils";
 
 type Tab = "users" | "photos";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("users");
+  const { profile } = useAuth();
   const {
     users, usersLoading,
     allPhotos, photosLoading,
-    photoStats,
+    photoStats, userPhotoCounts,
     error,
     fetchUsers, createUser, updateUser, deleteUser,
     fetchAllPhotos, deleteAnyPhoto,
     resetUserPassword, fetchPhotoStats,
+    fetchUserPhotoCounts, reassignPhotos,
   } = useAdmin();
 
   useEffect(() => {
     fetchUsers();
     fetchPhotoStats();
-  }, [fetchUsers, fetchPhotoStats]);
+    fetchUserPhotoCounts();
+  }, [fetchUsers, fetchPhotoStats, fetchUserPhotoCounts]);
 
   useEffect(() => {
     if (tab === "photos") fetchAllPhotos();
@@ -64,10 +68,13 @@ export default function AdminPage() {
           <UsersPanel
             users={users}
             loading={usersLoading}
+            adminId={profile?.id ?? ""}
+            userPhotoCounts={userPhotoCounts}
             onCreate={createUser}
             onUpdate={updateUser}
             onDelete={deleteUser}
             onResetPassword={resetUserPassword}
+            onReassign={reassignPhotos}
           />
         )}
 
@@ -101,20 +108,26 @@ function TabBtn({ active, onClick, icon, label }: { active: boolean; onClick: ()
 interface UsersPanelProps {
   users: Profile[];
   loading: boolean;
+  adminId: string;
+  userPhotoCounts: Record<string, number>;
   onCreate: (email: string, password: string, role: "user" | "admin") => Promise<{ error: string | null }>;
   onUpdate: (id: string, updates: { role?: "user" | "admin"; disabled?: boolean }) => Promise<{ error: string | null }>;
   onDelete: (id: string) => Promise<{ error: string | null }>;
   onResetPassword: (email: string) => Promise<{ error: string | null }>;
+  onReassign: (fromUserId: string, toUserId: string) => Promise<{ error: string | null }>;
 }
 
-function UsersPanel({ users, loading, onCreate, onUpdate, onDelete, onResetPassword }: UsersPanelProps) {
+function UsersPanel({ users, loading, adminId, userPhotoCounts, onCreate, onUpdate, onDelete, onResetPassword, onReassign }: UsersPanelProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<"user" | "admin">("user");
   const [saving, setSaving] = useState(false);
   const [resettingId, setResettingId] = useState<string | null>(null);
+  const [reassigningId, setReassigningId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const handleUpdate = async (id: string) => {
     setSaving(true);
@@ -126,22 +139,48 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete, onResetPassw
   };
 
   const handleDelete = async (id: string, email: string) => {
-    if (!confirm(`Disable user "${email}"? They will be blocked from the app.`)) return;
+    setOpenMenuId(null);
+    if (!confirm(`Delete user "${email}"? This cannot be undone.`)) return;
     setActionError(null);
     const { error } = await onDelete(id);
     if (error) setActionError(error);
   };
 
   const handleResetPassword = async (id: string, email: string) => {
+    setOpenMenuId(null);
     if (!confirm(`Send a password reset link to "${email}"?`)) return;
     setActionError(null);
-    setResetSuccess(null);
+    setSuccessMsg(null);
     setResettingId(id);
     const { error } = await onResetPassword(email);
     setResettingId(null);
     if (error) setActionError(error);
-    else setResetSuccess(`Password reset link sent to ${email}.`);
+    else setSuccessMsg(`Password reset link sent to ${email}.`);
   };
+
+  const handleReassign = async (fromUserId: string, fromEmail: string, count: number) => {
+    setOpenMenuId(null);
+    if (!confirm(`Re-assign all ${count} photo${count !== 1 ? "s" : ""} from "${fromEmail}" to yourself?`)) return;
+    setActionError(null);
+    setSuccessMsg(null);
+    setReassigningId(fromUserId);
+    const { error } = await onReassign(fromUserId, adminId);
+    setReassigningId(null);
+    if (error) setActionError(error);
+    else setSuccessMsg(`${count} photo${count !== 1 ? "s" : ""} from ${fromEmail} have been re-assigned to you.`);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openMenuId]);
 
   return (
     <div className="space-y-4">
@@ -160,10 +199,10 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete, onResetPassw
           {actionError}
         </div>
       )}
-      {resetSuccess && (
+      {successMsg && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2.5 text-sm text-emerald-400 flex items-center justify-between gap-2">
-          {resetSuccess}
-          <button onClick={() => setResetSuccess(null)} className="text-emerald-600 hover:text-emerald-400 shrink-0">
+          {successMsg}
+          <button onClick={() => setSuccessMsg(null)} className="text-emerald-600 hover:text-emerald-400 shrink-0">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -194,100 +233,130 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete, onResetPassw
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Student</th>
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Role</th>
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Status</th>
+                <th className="text-left px-4 py-3 text-zinc-400 font-medium">Photos</th>
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Joined</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-zinc-800/50 last:border-0 hover:bg-zinc-800/30 transition-colors">
-                  <td className="px-4 py-3 text-zinc-200">{u.email}</td>
-                  <td className="px-4 py-3 text-zinc-300 text-xs">
-                    {u.student_name ?? <span className="text-zinc-600 italic">—</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    {editId === u.id ? (
-                      <select
-                        value={editRole}
-                        onChange={(e) => setEditRole(e.target.value as "user" | "admin")}
-                        className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-                      >
-                        <option value="user">user</option>
-                        <option value="admin">admin</option>
-                      </select>
-                    ) : (
-                      <RoleBadge role={u.role} />
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                      u.disabled ? "bg-red-500/15 text-red-400" : "bg-emerald-500/15 text-emerald-400"
-                    }`}>
-                      {u.disabled ? <><EyeOff className="w-3 h-3" /> Disabled</> : <><Eye className="w-3 h-3" /> Active</>}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-500 text-xs">
-                    {new Date(u.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 justify-end">
+              {users.map((u) => {
+                const photoCount = userPhotoCounts[u.id] ?? 0;
+                const isOpen = openMenuId === u.id;
+                return (
+                  <tr key={u.id} className="border-b border-zinc-800/50 last:border-0 hover:bg-zinc-800/30 transition-colors">
+                    <td className="px-4 py-3 text-zinc-200">{u.email}</td>
+                    <td className="px-4 py-3 text-zinc-300 text-xs">
+                      {u.student_name ?? <span className="text-zinc-600 italic">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
                       {editId === u.id ? (
-                        <>
-                          <button
-                            onClick={() => handleUpdate(u.id)}
-                            disabled={saving}
-                            className="p-1.5 rounded text-emerald-400 hover:bg-zinc-700 transition-colors disabled:opacity-50"
-                            title="Save"
-                          >
-                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            onClick={() => setEditId(null)}
-                            className="p-1.5 rounded text-zinc-500 hover:bg-zinc-700 transition-colors"
-                            title="Cancel"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </>
+                        <select
+                          value={editRole}
+                          onChange={(e) => setEditRole(e.target.value as "user" | "admin")}
+                          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                        >
+                          <option value="user">user</option>
+                          <option value="admin">admin</option>
+                        </select>
                       ) : (
-                        <>
-                          <button
-                            onClick={() => { setEditId(u.id); setEditRole(u.role); }}
-                            className="p-1.5 rounded text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 transition-colors"
-                            title="Edit role"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => onUpdate(u.id, { disabled: !u.disabled })}
-                            className="p-1.5 rounded text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 transition-colors"
-                            title={u.disabled ? "Enable user" : "Disable user"}
-                          >
-                            {u.disabled ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> : <ShieldOff className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            onClick={() => handleResetPassword(u.id, u.email)}
-                            disabled={resettingId === u.id}
-                            className="p-1.5 rounded text-zinc-500 hover:text-sky-400 hover:bg-zinc-700 transition-colors disabled:opacity-50"
-                            title="Send password reset email"
-                          >
-                            {resettingId === u.id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <KeyRound className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(u.id, u.email)}
-                            className="p-1.5 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-700 transition-colors"
-                            title="Delete user"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
+                        <RoleBadge role={u.role} />
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                        u.disabled ? "bg-red-500/15 text-red-400" : "bg-emerald-500/15 text-emerald-400"
+                      }`}>
+                        {u.disabled ? <><EyeOff className="w-3 h-3" /> Disabled</> : <><Eye className="w-3 h-3" /> Active</>}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-zinc-400 text-sm">
+                      {photoCount > 0
+                        ? <span className="font-medium text-zinc-300">{photoCount}</span>
+                        : <span className="text-zinc-600">0</span>}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-500 text-xs">
+                      {new Date(u.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 justify-end">
+                        {editId === u.id ? (
+                          <>
+                            <button
+                              onClick={() => handleUpdate(u.id)}
+                              disabled={saving}
+                              className="p-1.5 rounded text-emerald-400 hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                              title="Save"
+                            >
+                              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              onClick={() => setEditId(null)}
+                              className="p-1.5 rounded text-zinc-500 hover:bg-zinc-700 transition-colors"
+                              title="Cancel"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <div className="relative" ref={isOpen ? menuRef : undefined}>
+                            {(resettingId === u.id || reassigningId === u.id) ? (
+                              <Loader2 className="w-4 h-4 text-zinc-500 animate-spin mx-1.5" />
+                            ) : (
+                              <button
+                                onClick={() => setOpenMenuId(isOpen ? null : u.id)}
+                                className="p-1.5 rounded text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 transition-colors"
+                                title="Actions"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
+                            )}
+                            {isOpen && (
+                              <div className="absolute right-0 top-full mt-1 w-52 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden py-1">
+                                <button
+                                  onClick={() => { setOpenMenuId(null); setEditId(u.id); setEditRole(u.role); }}
+                                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5 text-zinc-500" /> Edit role
+                                </button>
+                                <button
+                                  onClick={() => { setOpenMenuId(null); onUpdate(u.id, { disabled: !u.disabled }); }}
+                                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                >
+                                  {u.disabled
+                                    ? <><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Enable user</>
+                                    : <><ShieldOff className="w-3.5 h-3.5 text-zinc-500" /> Disable user</>}
+                                </button>
+                                <button
+                                  onClick={() => handleResetPassword(u.id, u.email)}
+                                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                >
+                                  <KeyRound className="w-3.5 h-3.5 text-zinc-500" /> Send password reset
+                                </button>
+                                {photoCount > 0 && u.id !== adminId && (
+                                  <button
+                                    onClick={() => handleReassign(u.id, u.email, photoCount)}
+                                    className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                  >
+                                    <ArrowRightLeft className="w-3.5 h-3.5 text-sky-400" />
+                                    Re-assign {photoCount} photo{photoCount !== 1 ? "s" : ""} to me
+                                  </button>
+                                )}
+                                <div className="my-1 border-t border-zinc-800" />
+                                <button
+                                  onClick={() => handleDelete(u.id, u.email)}
+                                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-400 hover:bg-zinc-800 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Delete user
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

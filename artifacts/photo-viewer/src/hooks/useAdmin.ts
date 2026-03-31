@@ -43,6 +43,32 @@ export function useAdmin() {
   const [photosLoading, setPhotosLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoStats, setPhotoStats] = useState<{ total: number; slideshow: number } | null>(null);
+  const [userPhotoCounts, setUserPhotoCounts] = useState<Record<string, number>>({});
+
+  // ---- Per-user photo counts ----
+
+  const fetchUserPhotoCounts = useCallback(async () => {
+    const { data } = await supabase.from("photos").select("user_id");
+    if (!data) return;
+    const counts: Record<string, number> = {};
+    for (const row of data) {
+      counts[row.user_id] = (counts[row.user_id] ?? 0) + 1;
+    }
+    setUserPhotoCounts(counts);
+  }, []);
+
+  const reassignPhotos = useCallback(async (fromUserId: string, toUserId: string) => {
+    const { error: err } = await supabase
+      .from("photos")
+      .update({ user_id: toUserId })
+      .eq("user_id", fromUserId);
+    if (err) return { error: err.message };
+    setUserPhotoCounts((prev) => {
+      const moved = prev[fromUserId] ?? 0;
+      return { ...prev, [fromUserId]: 0, [toUserId]: (prev[toUserId] ?? 0) + moved };
+    });
+    return { error: null };
+  }, []);
 
   // ---- Photo stats ----
 
@@ -173,10 +199,11 @@ export function useAdmin() {
   return {
     users, usersLoading,
     allPhotos, photosLoading,
-    photoStats,
+    photoStats, userPhotoCounts,
     error,
     fetchUsers, createUser, updateUser, deleteUser,
     fetchAllPhotos, deleteAnyPhoto,
     resetUserPassword, fetchPhotoStats,
+    fetchUserPhotoCounts, reassignPhotos,
   };
 }
