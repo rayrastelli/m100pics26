@@ -50,7 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Race getSession() against a 6-second timeout so a paused/unreachable
+    // Supabase project doesn't leave the app stuck on the loading spinner.
+    const timeout = new Promise<{ data: { session: null } }>((resolve) =>
+      setTimeout(() => resolve({ data: { session: null } }), 6000)
+    );
+
+    Promise.race([supabase.auth.getSession(), timeout]).then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) await loadProfile(session.user.id);
@@ -65,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null);
       }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
