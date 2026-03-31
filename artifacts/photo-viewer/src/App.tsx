@@ -7,9 +7,10 @@ import AdminPage from "@/pages/AdminPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import PendingApprovalPage from "@/pages/PendingApprovalPage";
+import SlideshowPage from "@/pages/SlideshowPage";
 import { TopNav } from "@/components/TopNav";
 
-type View = "gallery" | "admin" | "settings";
+type View = "gallery" | "slideshow" | "admin" | "settings";
 
 function AppContent() {
   const { user, profile, loading, isAdmin } = useAuth();
@@ -38,6 +39,8 @@ function AppContent() {
         <AdminPage />
       ) : safeView === "settings" ? (
         <SettingsPage />
+      ) : safeView === "slideshow" ? (
+        <SlideshowPage />
       ) : (
         <GalleryPage />
       )}
