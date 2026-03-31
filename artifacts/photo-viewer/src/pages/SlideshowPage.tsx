@@ -77,6 +77,7 @@ export default function SlideshowPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [isOverRemove, setIsOverRemove] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -183,7 +184,7 @@ export default function SlideshowPage() {
     });
   };
   const onDragStart = (i: number) => setDragIndex(i);
-  const onDragEnter = (i: number) => setDragOver(i);
+  const onDragEnter = (i: number) => { setDragOver(i); setIsOverRemove(false); };
   const onDragEnd = () => {
     if (dragIndex !== null && dragOver !== null && dragIndex !== dragOver) {
       setEditOrder((o) => {
@@ -195,6 +196,11 @@ export default function SlideshowPage() {
     }
     setDragIndex(null);
     setDragOver(null);
+    setIsOverRemove(false);
+  };
+
+  const removeFromOrder = (i: number) => {
+    setEditOrder((o) => o.filter((_, idx) => idx !== i));
   };
 
   // ── Save as new show ──────────────────────────────────────────────────────
@@ -481,6 +487,31 @@ export default function SlideshowPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Remove zone — visible while dragging */}
+                {dragIndex !== null && (
+                  <div
+                    onDragEnter={() => setIsOverRemove(true)}
+                    onDragLeave={() => setIsOverRemove(false)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (dragIndex !== null) removeFromOrder(dragIndex);
+                      setDragIndex(null);
+                      setDragOver(null);
+                      setIsOverRemove(false);
+                    }}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 border-t transition-all duration-150 ${
+                      isOverRemove
+                        ? "bg-red-500/20 border-red-500/30 text-red-400"
+                        : "border-zinc-800 text-zinc-600"
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">
+                      {isOverRemove ? "Release to remove from slideshow" : "Drag here to remove"}
+                    </span>
+                  </div>
+                )}
 
                 {/* Save as new show footer */}
                 <div className="px-5 py-4 border-t border-zinc-800 shrink-0 space-y-2">
