@@ -63,9 +63,12 @@ export default function SlideshowPage() {
   const [loadingPhotos, setLoadingPhotos] = useState(true);
 
   const [current, setCurrent] = useState(0);
+  const [shownIndex, setShownIndex] = useState(0);
+  const [imgOpacity, setImgOpacity] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [intervalSecs, setIntervalSecs] = useState(3);
+  const [fadeDuration, setFadeDuration] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(false);
 
@@ -81,6 +84,31 @@ export default function SlideshowPage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRender = useRef(true);
+
+  // ── Crossfade when current changes ───────────────────────────────────────
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      setShownIndex(current);
+      return;
+    }
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    if (fadeDuration === 0) {
+      setShownIndex(current);
+      setImgOpacity(1);
+      return;
+    }
+    const halfMs = fadeDuration * 500;
+    setImgOpacity(0);
+    fadeTimerRef.current = setTimeout(() => {
+      setShownIndex(current);
+      requestAnimationFrame(() => requestAnimationFrame(() => setImgOpacity(1)));
+    }, halfMs);
+    return () => { if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current); };
+  }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Apply a show's ordering to the photo list ─────────────────────────────
 
@@ -277,12 +305,15 @@ export default function SlideshowPage() {
       style={{ height: isFullscreen ? "100vh" : "calc(100vh - 56px)" }}
     >
       {/* ── Current photo ── */}
-      {photo && (
+      {photos[shownIndex] && (
         <img
-          key={photo.id}
-          src={photo.med_url}
-          alt={photo.title}
+          src={photos[shownIndex].med_url}
+          alt={photos[shownIndex].title}
           className="absolute inset-0 w-full h-full object-contain"
+          style={{
+            opacity: imgOpacity,
+            transition: fadeDuration > 0 ? `opacity ${fadeDuration / 2}s ease-in-out` : "none",
+          }}
           draggable={false}
         />
       )}
@@ -379,6 +410,18 @@ export default function SlideshowPage() {
               </div>
             </div>
           )}
+
+          {/* Fade */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-white/70 text-xs shrink-0">Fade (s)</span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setFadeDuration((s) => Math.max(0, +(s - 0.5).toFixed(1)))}
+                className="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-white text-xs transition-colors">−</button>
+              <span className="text-white text-sm w-6 text-center">{fadeDuration}</span>
+              <button onClick={() => setFadeDuration((s) => Math.min(5, +(s + 0.5).toFixed(1)))}
+                className="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-white text-xs transition-colors">+</button>
+            </div>
+          </div>
         </div>
       </div>
 
