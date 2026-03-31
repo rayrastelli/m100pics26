@@ -225,7 +225,7 @@ function UsersPanel({ users, loading, adminId, userPhotoCounts, onCreate, onUpda
           <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
         </div>
       ) : (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-visible">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-800">
