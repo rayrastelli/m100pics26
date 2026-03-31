@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Users, Images, Plus, Trash2, Edit2, X, Check,
-  ShieldCheck, ShieldOff, Loader2, UserPlus, Eye, EyeOff
+  ShieldCheck, ShieldOff, Loader2, UserPlus, Eye, EyeOff, KeyRound
 } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Profile } from "@/hooks/useAuth";
@@ -17,6 +17,7 @@ export default function AdminPage() {
     error,
     fetchUsers, createUser, updateUser, deleteUser,
     fetchAllPhotos, deleteAnyPhoto,
+    resetUserPassword,
   } = useAdmin();
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function AdminPage() {
             onCreate={createUser}
             onUpdate={updateUser}
             onDelete={deleteUser}
+            onResetPassword={resetUserPassword}
           />
         )}
 
@@ -84,14 +86,17 @@ interface UsersPanelProps {
   onCreate: (email: string, password: string, role: "user" | "admin") => Promise<{ error: string | null }>;
   onUpdate: (id: string, updates: { role?: "user" | "admin"; disabled?: boolean }) => Promise<{ error: string | null }>;
   onDelete: (id: string) => Promise<{ error: string | null }>;
+  onResetPassword: (email: string) => Promise<{ error: string | null }>;
 }
 
-function UsersPanel({ users, loading, onCreate, onUpdate, onDelete }: UsersPanelProps) {
+function UsersPanel({ users, loading, onCreate, onUpdate, onDelete, onResetPassword }: UsersPanelProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<"user" | "admin">("user");
   const [saving, setSaving] = useState(false);
+  const [resettingId, setResettingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
 
   const handleUpdate = async (id: string) => {
     setSaving(true);
@@ -109,6 +114,17 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete }: UsersPanel
     if (error) setActionError(error);
   };
 
+  const handleResetPassword = async (id: string, email: string) => {
+    if (!confirm(`Send a password reset link to "${email}"?`)) return;
+    setActionError(null);
+    setResetSuccess(null);
+    setResettingId(id);
+    const { error } = await onResetPassword(email);
+    setResettingId(null);
+    if (error) setActionError(error);
+    else setResetSuccess(`Password reset link sent to ${email}.`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -124,6 +140,14 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete }: UsersPanel
       {actionError && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5 text-sm text-red-400">
           {actionError}
+        </div>
+      )}
+      {resetSuccess && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2.5 text-sm text-emerald-400 flex items-center justify-between gap-2">
+          {resetSuccess}
+          <button onClick={() => setResetSuccess(null)} className="text-emerald-600 hover:text-emerald-400 shrink-0">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -222,6 +246,16 @@ function UsersPanel({ users, loading, onCreate, onUpdate, onDelete }: UsersPanel
                             title={u.disabled ? "Enable user" : "Disable user"}
                           >
                             {u.disabled ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> : <ShieldOff className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={() => handleResetPassword(u.id, u.email)}
+                            disabled={resettingId === u.id}
+                            className="p-1.5 rounded text-zinc-500 hover:text-sky-400 hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                            title="Send password reset email"
+                          >
+                            {resettingId === u.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <KeyRound className="w-3.5 h-3.5" />}
                           </button>
                           <button
                             onClick={() => handleDelete(u.id, u.email)}

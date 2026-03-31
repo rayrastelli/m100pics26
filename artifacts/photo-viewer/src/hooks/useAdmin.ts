@@ -150,11 +150,18 @@ export function useAdmin() {
     return { error: null };
   }, []);
 
+  const resetUserPassword = useCallback(async (email: string) => {
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email);
+    if (err) return { error: err.message };
+    return { error: null };
+  }, []);
+
   return {
     users, usersLoading,
     allPhotos, photosLoading,
     error,
     fetchUsers, createUser, updateUser, deleteUser,
     fetchAllPhotos, deleteAnyPhoto,
+    resetUserPassword,
   };
 }
