@@ -6,6 +6,7 @@ const app: Express = express();
 
 const allowedCorsHosts = new Set([
   "white-finch-295716.hostingersite.com",
+  "whitesmoke-clam-453430.hostingersite.com",
   "localhost",
   "127.0.0.1",
 ]);

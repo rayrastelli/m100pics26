@@ -15,6 +15,12 @@ interface ServiceAccountKey {
 function getServiceAccount(): ServiceAccountKey {
   const keyJson = process.env["GCS_SERVICE_ACCOUNT_KEY"];
   if (!keyJson) throw new Error("GCS_SERVICE_ACCOUNT_KEY is not set");
+  // Debug log to inspect the first part of the env value in production.
+  // Shows a JSON-escaped preview so we can see leading characters safely.
+  console.log(
+    "[GCS_SERVICE_ACCOUNT_KEY preview]",
+    JSON.stringify(keyJson).slice(0, 120),
+  );
   return JSON.parse(keyJson) as ServiceAccountKey;
 }
 
