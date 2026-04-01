@@ -11,7 +11,8 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "npm run typecheck:libs && npm run --workspaces --if-present typecheck",
     "dev": "npm run --workspace @workspace/photo-viewer dev",
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "npm run build:node-app"
   },
   "private": true,
   "engines": {
