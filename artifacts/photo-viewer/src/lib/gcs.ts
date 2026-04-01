@@ -1,7 +1,8 @@
 // GCS storage helpers — talk to the api-server for signed URLs and deletes.
 // The api-server is proxied at /api/* on the same domain (no prefix needed).
 
-const API_BASE = "";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+  ?.replace(/\/+$/, "") ?? "";
 
 const BUCKET = "boosterpics2026";
 

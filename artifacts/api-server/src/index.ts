@@ -1,12 +1,16 @@
 import app from "./app";
+import { config as loadEnv } from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const rawPort = process.env["PORT"];
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFilePath);
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
+// Load env from repo root for local development, then fallback to default resolution.
+loadEnv({ path: path.resolve(currentDir, "..", "..", "..", ".env") });
+loadEnv();
+
+const rawPort = process.env["PORT"] ?? "8080";
 
 const port = Number(rawPort);
 
