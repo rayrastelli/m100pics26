@@ -13,15 +13,33 @@ interface ServiceAccountKey {
 }
 
 function getServiceAccount(): ServiceAccountKey {
-  const keyJson = process.env["GCS_SERVICE_ACCOUNT_KEY"];
-  if (!keyJson) throw new Error("GCS_SERVICE_ACCOUNT_KEY is not set");
-  // Debug log to inspect the first part of the env value in production.
-  // Shows a JSON-escaped preview so we can see leading characters safely.
-  console.log(
-    "[GCS_SERVICE_ACCOUNT_KEY preview]",
-    JSON.stringify(keyJson).slice(0, 120),
-  );
-  return JSON.parse(keyJson) as ServiceAccountKey;
+  const raw = process.env["GCS_SERVICE_ACCOUNT_KEY"];
+  if (!raw) {
+    throw new Error("GCS_SERVICE_ACCOUNT_KEY is not set");
+  }
+
+  // Primary path: plain JSON object string (local .env).
+  try {
+    return JSON.parse(raw) as ServiceAccountKey;
+  } catch {
+    // Hostinger or other panels may wrap/escape the value.
+    let s = raw.trim();
+
+    // Strip one layer of surrounding quotes if present:  "{...}" or '{...}'
+    if (
+      (s.startsWith('"') && s.endsWith('"')) ||
+      (s.startsWith("'") && s.endsWith("'"))
+    ) {
+      s = s.slice(1, -1);
+    }
+
+    // If it starts with an escaped brace, unescape once: \{ -> {
+    if (s.startsWith("\\{")) {
+      s = s.replace(/\\([{])/g, "$1");
+    }
+
+    return JSON.parse(s) as ServiceAccountKey;
+  }
 }
 
 // Build a GCS v4 signed URL for a PUT upload
