@@ -19,18 +19,14 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        working-directory: artifacts/photo-viewer
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
       - name: Build photo viewer
-        working-directory: artifacts/photo-viewer
         env:
           NODE_ENV: production
-          PORT: 3000
-          BASE_PATH: /
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-        run: npm run build
+        run: npm run build:web
 
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -38,7 +34,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: artifacts/photo-viewer/dist/public/
+          local-dir: dist/
           server-dir: ${{ secrets.FTP_SERVER_DIR }}
           exclude: |
             **/.git*
