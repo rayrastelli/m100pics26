@@ -190,7 +190,7 @@ function ToggleCell({
   offIcon: React.ReactNode;
   onLabel: string;
   offLabel: string;
-  onToggle: () => Promise<void>;
+  onToggle: () => Promise<unknown>;
 }) {
   const [saving, setSaving] = useState(false);
   const handle = async () => {

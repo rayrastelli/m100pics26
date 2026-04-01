@@ -84,6 +84,10 @@ interface SignError {
   error: string;
 }
 
+function isSignError(result: SignResult | SignError): result is SignError {
+  return result.error !== null;
+}
+
 async function signUpload(
   filename: string,
   contentType: string,
@@ -178,9 +182,9 @@ export async function uploadPhotoVariants(
       signUpload(file.name, "image/jpeg", userTag, "med", baseId),
     ]);
 
-    if (fullSign.error) return err(fullSign.error);
-    if (thumbSign.error) return err(thumbSign.error);
-    if (medSign.error) return err(medSign.error);
+    if (isSignError(fullSign)) return err(fullSign.error);
+    if (isSignError(thumbSign)) return err(thumbSign.error);
+    if (isSignError(medSign)) return err(medSign.error);
 
     // 3. Upload all three to GCS in parallel
     await Promise.all([
@@ -214,7 +218,7 @@ export async function uploadToGcs(
 ): Promise<{ objectPath: string; publicUrl: string; error: null } | { objectPath: null; publicUrl: null; error: string }> {
   const baseId = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const sign = await signUpload(file.name, file.type, userTag, "full", baseId);
-  if (sign.error) return { objectPath: null, publicUrl: null, error: sign.error };
+  if (isSignError(sign)) return { objectPath: null, publicUrl: null, error: sign.error };
 
   try {
     await putToGcs(sign.signedUrl, file, file.type);

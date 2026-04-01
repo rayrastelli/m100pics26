@@ -91,11 +91,13 @@ export function usePhotos() {
         const pathsToClean: string[] = [];
 
         const variantResult = await uploadPhotoVariants(file, profile.user_tag);
-        if (!variantResult.error) {
+        if (variantResult.error === null) {
           fullPath = variantResult.fullPath;
           thumbPath = variantResult.thumbPath;
           medPath = variantResult.medPath;
-          pathsToClean.push(fullPath, thumbPath, medPath);
+          pathsToClean.push(fullPath);
+          if (thumbPath) pathsToClean.push(thumbPath);
+          if (medPath) pathsToClean.push(medPath);
         } else {
           // Variant upload failed — fall back to full-res only
           console.warn("[upload] variant upload failed, falling back:", variantResult.error);
