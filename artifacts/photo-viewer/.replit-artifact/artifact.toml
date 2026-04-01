@@ -15,14 +15,14 @@ name = "web"
 paths = ["/"]
 
 [services.development]
-run = "pnpm --filter @workspace/photo-viewer run dev"
+run = "npm run --workspace @workspace/photo-viewer dev"
 
 [services.env]
 PORT = "23117"
 BASE_PATH = "/"
 
 [services.production]
-build = ["pnpm", "--filter", "@workspace/photo-viewer", "run", "build"]
+build = ["npm", "run", "--workspace", "@workspace/photo-viewer", "build"]
 publicDir = "artifacts/photo-viewer/dist/public"
 serve = "static"
 
