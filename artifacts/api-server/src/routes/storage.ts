@@ -13,33 +13,45 @@ interface ServiceAccountKey {
 }
 
 function getServiceAccount(): ServiceAccountKey {
-  const raw = process.env["GCS_SERVICE_ACCOUNT_KEY"];
-  if (!raw) {
-    throw new Error("GCS_SERVICE_ACCOUNT_KEY is not set");
+  const rawBase64 = process.env["GCS_SERVICE_ACCOUNT_KEY_BASE64"];
+  const rawJson = process.env["GCS_SERVICE_ACCOUNT_KEY"];
+
+  // Preferred: base64-encoded JSON (robust against panel escaping).
+  if (rawBase64) {
+    try {
+      const decoded = Buffer.from(rawBase64, "base64").toString("utf8");
+      return JSON.parse(decoded) as ServiceAccountKey;
+    } catch (err) {
+      console.error(
+        "[GCS_SERVICE_ACCOUNT_KEY_BASE64] failed to decode/parse:",
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
 
-  // Primary path: plain JSON object string (local .env).
-  try {
-    return JSON.parse(raw) as ServiceAccountKey;
-  } catch {
-    // Hostinger or other panels may wrap/escape the value.
-    let s = raw.trim();
-
-    // Strip one layer of surrounding quotes if present:  "{...}" or '{...}'
-    if (
-      (s.startsWith('"') && s.endsWith('"')) ||
-      (s.startsWith("'") && s.endsWith("'"))
-    ) {
-      s = s.slice(1, -1);
-    }
-
-    // If it starts with an escaped brace, unescape once: \{ -> {
-    if (s.startsWith("\\{")) {
-      s = s.replace(/\\([{])/g, "$1");
-    }
-
-    return JSON.parse(s) as ServiceAccountKey;
+  if (!rawJson) {
+    throw new Error(
+      "GCS service account key is not set. Provide GCS_SERVICE_ACCOUNT_KEY_BASE64 (preferred) or GCS_SERVICE_ACCOUNT_KEY.",
+    );
   }
+
+  // Fallback: try to parse JSON env with some normalization for panels that wrap/escape.
+  let s = rawJson.trim();
+
+  // Strip one layer of surrounding quotes if present:  "{...}" or '{...}'
+  if (
+    (s.startsWith('"') && s.endsWith('"')) ||
+    (s.startsWith("'") && s.endsWith("'"))
+  ) {
+    s = s.slice(1, -1);
+  }
+
+  // If it starts with an escaped brace, unescape once: \{ -> {
+  if (s.startsWith("\\{")) {
+    s = s.replace(/\\([{])/g, "$1");
+  }
+
+  return JSON.parse(s) as ServiceAccountKey;
 }
 
 // Build a GCS v4 signed URL for a PUT upload
