@@ -11,6 +11,7 @@ const allowedCorsHosts = new Set([
 ]);
 
 const allowedCorsBaseDomains = ["beltonbandboosters.com", "beltonbandboosters.org"];
+const allowedCorsWildcardDomains = ["hostingersite.com"];
 
 function isAllowedCorsHost(hostname: string): boolean {
   if (allowedCorsHosts.has(hostname)) {
@@ -18,6 +19,8 @@ function isAllowedCorsHost(hostname: string): boolean {
   }
 
   return allowedCorsBaseDomains.some(
+    (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+  ) || allowedCorsWildcardDomains.some(
     (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
   );
 }
