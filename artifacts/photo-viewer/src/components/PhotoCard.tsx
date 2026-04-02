@@ -10,10 +10,12 @@ interface PhotoCardProps {
   onRate: (photoId: string, rating: number | null) => Promise<unknown>;
   onToggleSlideshow: (photoId: string, slideshow: boolean) => Promise<unknown>;
   onToggleActive: (photoId: string, active: boolean) => Promise<unknown>;
+  onHoverStart?: (photoId: string) => void;
+  onHoverEnd?: () => void;
 }
 
 export function PhotoCard({
-  photo, index, onClick, onRate, onToggleSlideshow, onToggleActive,
+  photo, index, onClick, onRate, onToggleSlideshow, onToggleActive, onHoverStart, onHoverEnd,
 }: PhotoCardProps) {
   const stopProp = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -25,6 +27,8 @@ export function PhotoCard({
       )}
       style={{ animationDelay: `${index * 40}ms` }}
       onClick={onClick}
+      onMouseEnter={() => onHoverStart?.(photo.id)}
+      onMouseLeave={() => onHoverEnd?.()}
     >
       <img
         src={photo.thumb_url ?? photo.url}

@@ -2,13 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import {
   Users, Images, Play, Plus, Trash2, Edit2, X, Check,
   ShieldCheck, ShieldOff, Loader2, UserPlus, Eye, EyeOff,
-  KeyRound, MoreHorizontal, ArrowRightLeft
+  KeyRound, MoreHorizontal, ArrowRightLeft, MonitorPlay, GripVertical,
 } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Profile, useAuth } from "@/hooks/useAuth";
 import { formatBytes } from "@/lib/utils";
+import { useEffect as useReactEffect, useState as useReactState } from "react";
+import { supabase } from "@/lib/supabase";
+import { gcsPublicUrl, isGcsPath } from "@/lib/gcs";
+import { useSlideshowConfig, Slideshow } from "@/hooks/useSlideshowConfig";
 
-type Tab = "users" | "photos";
+type Tab = "users" | "photos" | "slideshows";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("users");
@@ -41,6 +45,7 @@ export default function AdminPage() {
           <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
             <TabBtn active={tab === "users"} onClick={() => setTab("users")} icon={<Users className="w-4 h-4" />} label="Users" />
             <TabBtn active={tab === "photos"} onClick={() => setTab("photos")} icon={<Images className="w-4 h-4" />} label="All Photos" />
+            <TabBtn active={tab === "slideshows"} onClick={() => setTab("slideshows")} icon={<MonitorPlay className="w-4 h-4" />} label="Slideshows" />
           </div>
           {photoStats && (
             <div className="flex items-center gap-3">
@@ -84,6 +89,10 @@ export default function AdminPage() {
             loading={photosLoading}
             onDelete={deleteAnyPhoto}
           />
+        )}
+
+        {tab === "slideshows" && (
+          <SlideshowsPanel />
         )}
       </div>
     </div>
@@ -556,6 +565,487 @@ function PhotosPanel({ photos, loading, onDelete }: PhotosPanelProps) {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ---- SLIDESHOWS PANEL ----
+
+interface SlideshowPhoto {
+  id: string;
+  title: string;
+  storage_path: string;
+  thumb_path: string | null;
+  med_path: string | null;
+  url: string;
+  thumb_url: string;
+  med_url: string;
+}
+
+function resolveUrl(path: string): string {
+  if (isGcsPath(path)) return gcsPublicUrl(path);
+  const { data } = supabase.storage.from("band-pics").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+function buildOrderedPhotos(ids: string[], map: Map<string, SlideshowPhoto>): SlideshowPhoto[] {
+  const ordered: SlideshowPhoto[] = [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    const p = map.get(id);
+    if (p) { ordered.push(p); seen.add(id); }
+  }
+  // Append any slideshow photos not in the saved order
+  for (const p of map.values()) {
+    if (!seen.has(p.id)) ordered.push(p);
+  }
+  return ordered;
+}
+
+function suggestShowName(shows: Slideshow[]): string {
+  let max = 0;
+  for (const s of shows) {
+    const m = s.name.match(/^slideshow_(\d+)$/i);
+    if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
+  }
+  return `slideshow_${max + 1}`;
+}
+
+function SlideshowsPanel() {
+  const [loadingPhotos, setLoadingPhotos] = useReactState(true);
+  const [photos, setPhotos] = useReactState<SlideshowPhoto[]>([]);
+  const [error, setError] = useReactState<string | null>(null);
+
+  const [editOrder, setEditOrder] = useReactState<SlideshowPhoto[]>([]);
+  const [originalOrder, setOriginalOrder] = useReactState<SlideshowPhoto[]>([]);
+  const [dragIndex, setDragIndex] = useReactState<number | null>(null);
+  const [dragOver, setDragOver] = useReactState<number | null>(null);
+  const [queuedRemoveIds, setQueuedRemoveIds] = useReactState<string[]>([]);
+  const [isOverRemoveZone, setIsOverRemoveZone] = useReactState(false);
+
+  const [currentShowName, setCurrentShowName] = useReactState<string>("");
+  const [newShowName, setNewShowName] = useReactState<string>("");
+  const [saveError, setSaveError] = useReactState<string | null>(null);
+  const [deletingId, setDeletingId] = useReactState<string | null>(null);
+
+  const photoMapRef = useRef<Map<string, SlideshowPhoto>>(new Map());
+  const droppedInRemoveZoneRef = useRef(false);
+
+  const {
+    shows,
+    currentShowId,
+    loading: configLoading,
+    saving,
+    loadShows,
+    createShow,
+    deleteShow,
+    selectShow,
+    updateShow,
+  } = useSlideshowConfig();
+
+  const isLoading = loadingPhotos || configLoading;
+
+  useReactEffect(() => {
+    async function init() {
+      setLoadingPhotos(true);
+      setError(null);
+      const [allShows, photosResult] = await Promise.all([
+        loadShows(),
+        supabase.from("photos").select("*").eq("slideshow", true),
+      ]);
+
+      if (photosResult.error) {
+        setError(photosResult.error.message);
+        setLoadingPhotos(false);
+        return;
+      }
+
+      const map = new Map<string, SlideshowPhoto>();
+      for (const p of (photosResult.data ?? []) as any[]) {
+        map.set(p.id, {
+          id: p.id,
+          title: p.title,
+          storage_path: p.storage_path,
+          thumb_path: p.thumb_path ?? null,
+          med_path: p.med_path ?? null,
+          url: resolveUrl(p.storage_path),
+          thumb_url: p.thumb_path ? gcsPublicUrl(p.thumb_path) : resolveUrl(p.storage_path),
+          med_url: p.med_path ? gcsPublicUrl(p.med_path) : resolveUrl(p.storage_path),
+        });
+      }
+      photoMapRef.current = map;
+
+      const active = allShows.find((s) => s.id === currentShowId) ?? allShows[0] ?? null;
+      if (active) {
+        const ordered = buildOrderedPhotos(active.photo_ids, photoMapRef.current);
+        setPhotos(ordered);
+        setEditOrder(ordered);
+        setOriginalOrder(ordered);
+        setCurrentShowName(active.name);
+      } else {
+        const base = Array.from(photoMapRef.current.values());
+        setPhotos(base);
+        setEditOrder(base);
+        setOriginalOrder(base);
+        setCurrentShowName("");
+      }
+      setQueuedRemoveIds([]);
+
+      setLoadingPhotos(false);
+    }
+    init();
+  }, [loadShows, currentShowId]);
+
+  const onDragStart = (i: number) => setDragIndex(i);
+  const onDragEnter = (i: number) => setDragOver(i);
+  const onDragEnd = () => {
+    if (droppedInRemoveZoneRef.current) {
+      droppedInRemoveZoneRef.current = false;
+      setDragIndex(null);
+      setDragOver(null);
+      setIsOverRemoveZone(false);
+      return;
+    }
+    if (dragIndex !== null && dragOver !== null && dragIndex !== dragOver) {
+      setEditOrder((o) => {
+        const a = [...o];
+        const [item] = a.splice(dragIndex, 1);
+        a.splice(dragOver, 0, item);
+        return a;
+      });
+    }
+    setDragIndex(null);
+    setDragOver(null);
+    setIsOverRemoveZone(false);
+  };
+
+  const queueForRemoval = (idx: number) => {
+    const item = editOrder[idx];
+    if (!item) return;
+    setQueuedRemoveIds((ids) => (ids.includes(item.id) ? ids : [...ids, item.id]));
+  };
+
+  const randomizeOrder = () => {
+    setEditOrder((o) => {
+      const a = [...o];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    });
+  };
+
+  const handleCreateNewFromCurrent = () => {
+    const base = Array.from(photoMapRef.current.values());
+    setPhotos(base);
+    setEditOrder(base);
+    setOriginalOrder(base);
+    setCurrentShowName("");
+    setNewShowName(suggestShowName(shows));
+    setSaveError(null);
+    setQueuedRemoveIds([]);
+  };
+
+  const handleLoadShow = (show: Slideshow) => {
+    selectShow(show.id);
+    const ordered = buildOrderedPhotos(show.photo_ids, photoMapRef.current);
+    setPhotos(ordered);
+    setEditOrder(ordered);
+    setOriginalOrder(ordered);
+    setCurrentShowName(show.name);
+    setNewShowName(show.name);
+    setSaveError(null);
+    setQueuedRemoveIds([]);
+  };
+
+  const handleReset = () => {
+    setEditOrder(originalOrder);
+    setQueuedRemoveIds([]);
+    setSaveError(null);
+  };
+
+  const applyQueuedRemovals = () => {
+    if (queuedRemoveIds.length === 0) return;
+    setEditOrder((order) => order.filter((p) => !queuedRemoveIds.includes(p.id)));
+    setQueuedRemoveIds([]);
+  };
+
+  const handleSave = async () => {
+    const trimmed = currentShowName.trim();
+    if (!trimmed) {
+      setSaveError("Enter a name for this show.");
+      return;
+    }
+    setSaveError(null);
+    if (currentShowId) {
+      const { error } = await updateShow(currentShowId, {
+        name: trimmed,
+        photo_ids: editOrder.map((p) => p.id),
+      });
+      if (error) {
+        setSaveError(error);
+      } else {
+        setOriginalOrder(editOrder);
+      }
+    } else {
+      const { show, error } = await createShow(trimmed, editOrder.map((p) => p.id));
+      if (error || !show) {
+        setSaveError(error ?? "Unknown error");
+      } else {
+        setCurrentShowName(show.name);
+        setNewShowName(show.name);
+        setOriginalOrder(editOrder);
+      }
+    }
+  };
+
+  const handleSaveAsNew = async () => {
+    const name = newShowName.trim();
+    if (!name) {
+      setSaveError("Enter a name for this show.");
+      return;
+    }
+    setSaveError(null);
+    const { show, error } = await createShow(name, editOrder.map((p) => p.id));
+    if (error || !show) {
+      setSaveError(error ?? "Unknown error");
+      return;
+    }
+    setCurrentShowName(show.name);
+    setNewShowName("");
+    setOriginalOrder(editOrder);
+  };
+
+  const handleDeleteShow = async () => {
+    if (!currentShowId) return;
+    if (!confirm("Delete this show? This cannot be undone.")) return;
+    setDeletingId(currentShowId);
+    const { error } = await deleteShow(currentShowId);
+    setDeletingId(null);
+    if (error) {
+      setSaveError(error);
+      return;
+    }
+    // After delete, reset to base order
+    const base = Array.from(photoMapRef.current.values());
+    setPhotos(base);
+    setEditOrder(base);
+    setOriginalOrder(base);
+    setCurrentShowName("");
+    setNewShowName("");
+    setQueuedRemoveIds([]);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <MonitorPlay className="w-4 h-4 text-emerald-400" />
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Slideshow Builder
+            </h2>
+          </div>
+          <span className="text-xs text-zinc-500">
+            {photos.length} photo{photos.length !== 1 ? "s" : ""} marked for slideshow
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+          <span>Show:</span>
+          <select
+            value={currentShowId ?? ""}
+            onChange={(e) => {
+              const id = e.target.value || null;
+              const show = shows.find((s) => s.id === id) ?? null;
+              if (show) {
+                handleLoadShow(show);
+              } else {
+                handleCreateNewFromCurrent();
+              }
+            }}
+            className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100"
+          >
+            <option value="">(unsaved order)</option>
+            {shows.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+        <div className="flex-1 space-y-2">
+          <label className="block text-xs text-zinc-400">Show name</label>
+          <input
+            type="text"
+            value={currentShowName}
+            onChange={(e) => { setCurrentShowName(e.target.value); setSaveError(null); }}
+            placeholder="e.g. Championship 2026"
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+          />
+          <div className="flex flex-wrap gap-2 mt-2">
+            <button
+              onClick={handleSave}
+              disabled={saving || photos.length === 0}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Save
+            </button>
+            <button
+              onClick={handleCreateNewFromCurrent}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-100 border border-zinc-700 hover:bg-zinc-800"
+            >
+              Include all marked
+            </button>
+            <button
+              onClick={randomizeOrder}
+              disabled={editOrder.length === 0}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-100 border border-zinc-700 hover:bg-zinc-800 disabled:opacity-40"
+            >
+              Shuffle order
+            </button>
+            <button
+              onClick={handleReset}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-100 border border-zinc-700 hover:bg-zinc-800"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="w-full lg:w-80 space-y-2">
+          <label className="block text-xs text-zinc-400">Save as new show</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newShowName}
+              onChange={(e) => { setNewShowName(e.target.value); setSaveError(null); }}
+              placeholder={suggestShowName(shows)}
+              className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+            />
+            <button
+              onClick={handleSaveAsNew}
+              disabled={saving || !newShowName.trim()}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+              Save new
+            </button>
+          </div>
+          <button
+            onClick={handleDeleteShow}
+            disabled={!currentShowId || deletingId === currentShowId}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 disabled:opacity-40"
+          >
+            {deletingId === currentShowId ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="w-3.5 h-3.5" />
+            )}
+            Delete show
+          </button>
+          {saveError && (
+            <p className="text-xs text-red-400 pt-1">{saveError}</p>
+          )}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
+        </div>
+      ) : photos.length === 0 ? (
+        <p className="text-sm text-zinc-500">
+          No photos are marked for slideshow yet. Toggle “Slideshow” on some photos in the Gallery view.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 mt-4">
+            {editOrder.map((p, i) => (
+              <div
+                key={p.id}
+                draggable
+                onDragStart={() => onDragStart(i)}
+                onDragEnter={() => onDragEnter(i)}
+                onDragEnd={onDragEnd}
+                onDragOver={(e) => e.preventDefault()}
+                className={`group relative aspect-square bg-zinc-800 rounded-xl overflow-hidden cursor-grab active:cursor-grabbing ${
+                  dragOver === i ? "ring-2 ring-emerald-400" : ""
+                }`}
+              >
+                <img
+                  src={p.thumb_url}
+                  alt={p.title}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                <div className="absolute inset-0 p-2.5 flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white/70">
+                      <GripVertical className="w-3 h-3" />
+                      {i + 1}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-white text-xs font-medium truncate">{p.title}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            className={`mt-4 rounded-xl border px-4 py-3 transition-colors ${
+              isOverRemoveZone
+                ? "border-red-500/60 bg-red-500/15"
+                : "border-zinc-700 bg-zinc-900/60"
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsOverRemoveZone(true);
+            }}
+            onDragLeave={() => setIsOverRemoveZone(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              droppedInRemoveZoneRef.current = true;
+              if (dragIndex !== null) queueForRemoval(dragIndex);
+              setDragIndex(null);
+              setDragOver(null);
+              setIsOverRemoveZone(false);
+            }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs text-zinc-300">
+                Drag tile here to queue removal from this show instance
+                <span className="text-zinc-500 ml-1">(does not change photo slideshow flag)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400">
+                  Queued: {queuedRemoveIds.length}
+                </span>
+                <button
+                  onClick={applyQueuedRemovals}
+                  disabled={queuedRemoveIds.length === 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 disabled:opacity-40"
+                >
+                  Remove queued from show
+                </button>
+                <button
+                  onClick={() => setQueuedRemoveIds([])}
+                  disabled={queuedRemoveIds.length === 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-300 border border-zinc-700 hover:bg-zinc-800 disabled:opacity-40"
+                >
+                  Clear queue
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

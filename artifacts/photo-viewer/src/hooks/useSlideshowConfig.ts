@@ -68,5 +68,38 @@ export function useSlideshowConfig() {
     localStorage.setItem(CURRENT_KEY, id);
   }, []);
 
-  return { shows, currentShowId, loading, saving, loadShows, createShow, deleteShow, selectShow };
+  const updateShow = useCallback(
+    async (
+      id: string,
+      updates: { name?: string; photo_ids?: string[] },
+    ): Promise<{ show: Slideshow | null; error: string | null }> => {
+      setSaving(true);
+      const { data, error } = await supabase
+        .from("slideshows")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+      setSaving(false);
+      if (error || !data) {
+        return { show: null, error: error?.message ?? "Unknown error" };
+      }
+      const show = data as Slideshow;
+      setShows((prev) => prev.map((s) => (s.id === id ? show : s)));
+      return { show, error: null };
+    },
+    [],
+  );
+
+  return {
+    shows,
+    currentShowId,
+    loading,
+    saving,
+    loadShows,
+    createShow,
+    deleteShow,
+    selectShow,
+    updateShow,
+  };
 }

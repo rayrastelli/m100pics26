@@ -7,6 +7,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { gcsPublicUrl, isGcsPath } from "@/lib/gcs";
 import { useSlideshowConfig, Slideshow } from "@/hooks/useSlideshowConfig";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SlideshowPhoto {
   id: string;
@@ -51,6 +52,8 @@ function buildOrderedPhotos(ids: string[], map: Map<string, SlideshowPhoto>): Sl
 type EditTab = "shows" | "order";
 
 export default function SlideshowPage() {
+  const { isAdmin } = useAuth();
+
   const {
     shows, currentShowId, loading: configLoading, saving,
     loadShows, createShow, deleteShow, selectShow,
@@ -377,13 +380,20 @@ export default function SlideshowPage() {
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
-            <button
-              onClick={() => { setEditMode(true); setEditOrder(photos); setPlaying(false); setNewShowName(suggestShowName(shows)); }}
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
-              title="Manage shows"
-            >
-              <Settings2 className="w-4 h-4" />
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setEditMode(true);
+                  setEditOrder(photos);
+                  setPlaying(false);
+                  setNewShowName(suggestShowName(shows));
+                }}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+                title="Manage shows (admin only)"
+              >
+                <Settings2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* Auto-advance toggle */}
@@ -426,7 +436,7 @@ export default function SlideshowPage() {
       </div>
 
       {/* ── Edit / Manage panel ── */}
-      {editMode && (
+      {isAdmin && editMode && (
         <div
           className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-40"
           onClick={handleCancelEdit}

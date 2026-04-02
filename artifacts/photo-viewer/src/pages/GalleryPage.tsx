@@ -376,6 +376,7 @@ export default function GalleryPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("gallery");
   const [cardSize, setCardSize] = useState<CardSize>("sm");
   const [tableThumbSize, setTableThumbSize] = useState<ThumbSize>("default");
+  const [hoveredPhotoId, setHoveredPhotoId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPhotos();
@@ -424,6 +425,46 @@ export default function GalleryPage() {
     statusFilter !== "all" ||
     slideshowFilter !== "all" ||
     tagFilter.length > 0;
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (viewMode !== "gallery" || !hoveredPhotoId) return;
+
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const hoveredPhoto = displayedPhotos.find((p) => p.id === hoveredPhotoId);
+      if (!hoveredPhoto) return;
+
+      if (e.key >= "1" && e.key <= "7") {
+        e.preventDefault();
+        void ratePhoto(hoveredPhoto.id, Number(e.key));
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      if (e.repeat && (key === "s" || key === "a")) return;
+
+      if (key === "s") {
+        e.preventDefault();
+        void toggleSlideshow(hoveredPhoto.id, !hoveredPhoto.slideshow);
+      } else if (key === "a") {
+        e.preventDefault();
+        void toggleActive(hoveredPhoto.id, !hoveredPhoto.active);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [viewMode, hoveredPhotoId, displayedPhotos, ratePhoto, toggleSlideshow, toggleActive]);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -493,7 +534,7 @@ export default function GalleryPage() {
             <SortDropdown value={sort} onChange={setSort} />
             {/* Page size picker */}
             <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden text-xs">
-              {[3, 20, 50, 100, 500].map((n) => (
+              {[12, 24, 48, 120, 240, 580].map((n) => (
                 <button
                   key={n}
                   onClick={() => setPageSize(n)}
@@ -683,6 +724,8 @@ export default function GalleryPage() {
               onRate={ratePhoto}
               onToggleSlideshow={toggleSlideshow}
               onToggleActive={toggleActive}
+              onHoverStart={setHoveredPhotoId}
+              onHoverEnd={() => setHoveredPhotoId(null)}
             />
           ))}
         </div>

@@ -4,13 +4,14 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import AuthPage from "@/pages/AuthPage";
 import GalleryPage from "@/pages/GalleryPage";
 import AdminPage from "@/pages/AdminPage";
-import SettingsPage from "@/pages/SettingsPage";
 import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import PendingApprovalPage from "@/pages/PendingApprovalPage";
 import SlideshowPage from "@/pages/SlideshowPage";
+import ProfilePage from "@/pages/ProfilePage";
+import HelpPage from "@/pages/HelpPage";
 import { TopNav } from "@/components/TopNav";
 
-type View = "gallery" | "slideshow" | "admin" | "settings";
+type View = "gallery" | "slideshow" | "admin" | "profile" | "help";
 
 function AppContent() {
   const { user, profile, loading, isAdmin } = useAuth();
@@ -37,8 +38,10 @@ function AppContent() {
       <TopNav activeView={safeView} onNavigate={setView} />
       {safeView === "admin" ? (
         <AdminPage />
-      ) : safeView === "settings" ? (
-        <SettingsPage />
+      ) : safeView === "profile" ? (
+        <ProfilePage />
+      ) : safeView === "help" ? (
+        <HelpPage />
       ) : safeView === "slideshow" ? (
         <SlideshowPage />
       ) : (
