@@ -371,7 +371,7 @@ export default function GalleryPage() {
   const [slideshowFilter, setSlideshowFilter] =
     useState<SlideshowFilter>("all");
   const [tagFilter, setTagFilter] = useState<string[]>([]);
-  const [pageSize, setPageSize] = useState<number>(50);
+  const [pageSize, setPageSize] = useState<number>(48);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [viewMode, setViewMode] = useState<ViewMode>("gallery");
   const [cardSize, setCardSize] = useState<CardSize>("sm");
