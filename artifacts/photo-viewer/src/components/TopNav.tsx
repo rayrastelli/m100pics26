@@ -1,9 +1,9 @@
 import logoUrl from "@assets/m100_1773294651634.png";
-import { Images, ShieldCheck, LogOut, User, MonitorPlay, CircleHelp } from "lucide-react";
+import { Images, ShieldCheck, LogOut, User, MonitorPlay, CircleHelp, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemePicker } from "@/components/ThemePicker";
 
-type ActiveView = "gallery" | "slideshow" | "admin" | "profile" | "help";
+type ActiveView = "gallery" | "slideshow" | "admin" | "profile" | "help" | "settings";
 
 interface TopNavProps {
   activeView: ActiveView;
@@ -47,6 +47,12 @@ export function TopNav({ activeView, onNavigate }: TopNavProps) {
             icon={<CircleHelp className="w-3.5 h-3.5" />}
             active={activeView === "help"}
             onClick={() => onNavigate("help")}
+          />
+          <NavLink
+            label="Settings"
+            icon={<Settings className="w-3.5 h-3.5" />}
+            active={activeView === "settings"}
+            onClick={() => onNavigate("settings")}
           />
           {isAdmin && (
             <NavLink

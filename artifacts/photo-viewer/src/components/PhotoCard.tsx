@@ -12,10 +12,11 @@ interface PhotoCardProps {
   onToggleActive: (photoId: string, active: boolean) => Promise<unknown>;
   onHoverStart?: (photoId: string) => void;
   onHoverEnd?: () => void;
+  showTags?: boolean;
 }
 
 export function PhotoCard({
-  photo, index, onClick, onRate, onToggleSlideshow, onToggleActive, onHoverStart, onHoverEnd,
+  photo, index, onClick, onRate, onToggleSlideshow, onToggleActive, onHoverStart, onHoverEnd, showTags = false,
 }: PhotoCardProps) {
   const stopProp = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -110,6 +111,20 @@ export function PhotoCard({
           </div>
         )}
       </div>
+
+      {/* Optional always-visible tags */}
+      {showTags && (photo.tags ?? []).length > 0 && (
+        <div className="absolute top-2 right-2 flex flex-wrap justify-end gap-1 max-w-[75%] pointer-events-none">
+          {(photo.tags ?? []).map((tag) => (
+            <span
+              key={tag}
+              className="px-1.5 py-0.5 rounded-md bg-black/65 text-zinc-100 text-xs leading-none border border-white/15 backdrop-blur-sm"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Rating dots (non-hover) */}
       {photo.rating !== null && (

@@ -25,6 +25,7 @@ import { UploadDialog } from "@/components/UploadDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { TableView } from "@/components/TableView";
 import { cn } from "@/lib/utils";
+import { readTagShortcutSettings } from "@/lib/tagShortcutSettings";
 
 type ViewMode = "gallery" | "table";
 type CardSize = "xs" | "sm" | "md" | "lg";
@@ -376,11 +377,24 @@ export default function GalleryPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("gallery");
   const [cardSize, setCardSize] = useState<CardSize>("sm");
   const [tableThumbSize, setTableThumbSize] = useState<ThumbSize>("default");
+  const [showTagsOnCards, setShowTagsOnCards] = useState(false);
   const [hoveredPhotoId, setHoveredPhotoId] = useState<string | null>(null);
+  const [tagShortcutToast, setTagShortcutToast] = useState<{ message: string; added: boolean } | null>(null);
+  const [shortcutTags, setShortcutTags] = useState<{ j: string | null; k: string | null; l: string | null }>({
+    j: null,
+    k: null,
+    l: null,
+  });
+  const tagToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchPhotos();
   }, [fetchPhotos]);
+
+  useEffect(() => {
+    if (!user) return;
+    setShortcutTags(readTagShortcutSettings(user.id));
+  }, [user]);
 
   // Master tag list from Settings, supplemented by any tags already on photos
   const allTags = useMemo(() => {
@@ -426,6 +440,26 @@ export default function GalleryPage() {
     slideshowFilter !== "all" ||
     tagFilter.length > 0;
 
+  const showTagShortcutToast = useCallback((tag: string, added: boolean) => {
+    if (tagToastTimeoutRef.current) {
+      clearTimeout(tagToastTimeoutRef.current);
+    }
+    setTagShortcutToast({
+      message: `Tag ${tag} has been ${added ? "added" : "removed"}`,
+      added,
+    });
+    tagToastTimeoutRef.current = setTimeout(() => {
+      setTagShortcutToast(null);
+      tagToastTimeoutRef.current = null;
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (tagToastTimeoutRef.current) clearTimeout(tagToastTimeoutRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (viewMode !== "gallery" || !hoveredPhotoId) return;
@@ -459,12 +493,37 @@ export default function GalleryPage() {
       } else if (key === "a") {
         e.preventDefault();
         void toggleActive(hoveredPhoto.id, !hoveredPhoto.active);
+      } else if (key === "j" || key === "k" || key === "l") {
+        const tag = shortcutTags[key];
+        if (!tag) return;
+        e.preventDefault();
+        const existingTags = hoveredPhoto.tags ?? [];
+        const hasTag = existingTags.includes(tag);
+        const nextTags = hasTag
+          ? existingTags.filter((t) => t !== tag)
+          : [...existingTags, tag];
+        void (async () => {
+          const result = await updateTags(hoveredPhoto.id, nextTags);
+          if (!result.error) {
+            showTagShortcutToast(tag, !hasTag);
+          }
+        })();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [viewMode, hoveredPhotoId, displayedPhotos, ratePhoto, toggleSlideshow, toggleActive]);
+  }, [
+    viewMode,
+    hoveredPhotoId,
+    displayedPhotos,
+    ratePhoto,
+    toggleSlideshow,
+    toggleActive,
+    shortcutTags,
+    updateTags,
+    showTagShortcutToast,
+  ]);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -532,6 +591,7 @@ export default function GalleryPage() {
                   : ""}
             </span>
             <SortDropdown value={sort} onChange={setSort} />
+
             {/* Page size picker */}
             <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden text-xs">
               {[12, 24, 48, 120, 240, 580].map((n) => (
@@ -549,6 +609,7 @@ export default function GalleryPage() {
                 </button>
               ))}
             </div>
+
             {/* Table thumb size picker — table only */}
             {viewMode === "table" && (
               <div className="flex items-center border border-zinc-700 rounded-lg overflow-hidden text-xs">
@@ -651,6 +712,15 @@ export default function GalleryPage() {
               {f.label}
             </Pill>
           ))}
+          <div className="ml-auto">
+            <Pill
+              active={showTagsOnCards}
+              onClick={() => setShowTagsOnCards((v) => !v)}
+              icon={<Tag className="w-3 h-3" />}
+            >
+              Show tags
+            </Pill>
+          </div>
         </div>
       </div>
 
@@ -726,6 +796,7 @@ export default function GalleryPage() {
               onToggleActive={toggleActive}
               onHoverStart={setHoveredPhotoId}
               onHoverEnd={() => setHoveredPhotoId(null)}
+              showTags={showTagsOnCards}
             />
           ))}
         </div>
@@ -828,6 +899,7 @@ export default function GalleryPage() {
             )
           }
           allTags={allTags}
+          shortcutTags={shortcutTags}
           onRate={ratePhoto}
           onToggleSlideshow={toggleSlideshow}
           onUpdateTags={(id, tags) => updateTags(id, tags)}
@@ -841,6 +913,18 @@ export default function GalleryPage() {
         allTags={allTags}
         onUpload={uploadPhoto}
       />
+      {tagShortcutToast && (
+        <div
+          className={cn(
+            "fixed bottom-5 right-5 z-40 px-4 py-3 rounded-xl border text-sm font-medium shadow-lg",
+            tagShortcutToast.added
+              ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+              : "bg-red-500/15 border-red-500/40 text-red-300",
+          )}
+        >
+          {tagShortcutToast.message}
+        </div>
+      )}
     </main>
   );
 }

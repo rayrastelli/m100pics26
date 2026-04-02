@@ -28,6 +28,12 @@ export default function HelpPage() {
           <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-300 sm:col-span-2">
             <span className="font-semibold text-zinc-100">A</span>: toggle active/inactive
           </div>
+          <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-300">
+            <span className="font-semibold text-zinc-100">J / K / L</span>: toggle configured picture tags
+          </div>
+          <div className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-300">
+            Configure J/K/L tag targets in <span className="font-semibold text-zinc-100">Settings</span>
+          </div>
         </div>
       </section>
 
@@ -59,6 +65,13 @@ export default function HelpPage() {
           <p>
             <span className="font-medium text-zinc-100">Active state:</span> inactive photos stay in the system
             but are visually de-emphasized and can be filtered.
+          </p>
+        </div>
+        <div className="flex items-start gap-2">
+          <Keyboard className="w-4 h-4 mt-0.5 text-zinc-400" />
+          <p>
+            <span className="font-medium text-zinc-100">Settings:</span> assign tags to J, K, and L so you can
+            rapidly toggle those tags while hovering photos in the Gallery.
           </p>
         </div>
       </section>

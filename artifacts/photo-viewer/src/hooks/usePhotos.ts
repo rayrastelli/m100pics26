@@ -29,6 +29,24 @@ export interface Photo {
 
 const SUPABASE_BUCKET = "band-pics";
 
+function normalizeTagName(tag: string): string {
+  return tag.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+function normalizeTags(tags: string[]): string[] {
+  return [...new Set(tags.map(normalizeTagName).filter(Boolean))];
+}
+
+async function ensureTagDefinitions(tags: string[]): Promise<void> {
+  const normalized = normalizeTags(tags);
+  if (normalized.length === 0) return;
+  const payload = normalized.map((name) => ({ name }));
+  const { error } = await supabase
+    .from("tag_definitions")
+    .upsert(payload, { onConflict: "name", ignoreDuplicates: true });
+  if (error) throw error;
+}
+
 function resolvePhotoUrl(storagePath: string): string {
   if (isGcsPath(storagePath)) {
     return gcsPublicUrl(storagePath);
@@ -115,7 +133,8 @@ export function usePhotos() {
         //    this keeps the INSERT compatible even if migration 012 hasn't run yet.
         // Merge the user's own tag with any tags chosen at upload time
         const autoTags = profile.user_tag ? [profile.user_tag] : [];
-        const mergedTags = [...new Set([...autoTags, ...(tags ?? [])])];
+        const mergedTags = normalizeTags([...autoTags, ...(tags ?? [])]);
+        await ensureTagDefinitions(mergedTags);
 
         const insertData: Record<string, unknown> = {
           user_id: user.id,
@@ -227,10 +246,17 @@ export function usePhotos() {
 
   const updateTags = useCallback(
     async (photoId: string, tags: string[]): Promise<{ error: string | null }> => {
-      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, tags } : p)));
+      const normalizedTags = normalizeTags(tags);
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, tags: normalizedTags } : p)));
+      try {
+        await ensureTagDefinitions(normalizedTags);
+      } catch (err: unknown) {
+        await fetchPhotos();
+        return { error: err instanceof Error ? err.message : "Failed to save tag definitions" };
+      }
       const { error: rpcErr } = await supabase.rpc("update_photo_tags", {
         photo_id: photoId,
-        new_tags: tags,
+        new_tags: normalizedTags,
       });
       if (rpcErr) {
         await fetchPhotos();

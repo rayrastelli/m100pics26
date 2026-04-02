@@ -10,6 +10,7 @@ interface LightboxProps {
   photos: Photo[];
   index: number;
   allTags: string[];
+  shortcutTags: { j: string | null; k: string | null; l: string | null };
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -19,7 +20,7 @@ interface LightboxProps {
 }
 
 export function Lightbox({
-  photos, index, allTags, onClose, onPrev, onNext, onRate, onToggleSlideshow, onUpdateTags,
+  photos, index, allTags, shortcutTags, onClose, onPrev, onNext, onRate, onToggleSlideshow, onUpdateTags,
 }: LightboxProps) {
   const photo = photos[index];
   const [tagError, setTagError] = useState<string | null>(null);
@@ -38,10 +39,45 @@ export function Lightbox({
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (!photo) return;
+
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft") onPrev();
       if (e.key === "ArrowRight") onNext();
-      
+
+      if (e.key >= "1" && e.key <= "7") {
+        e.preventDefault();
+        void onRate(photo.id, Number(e.key));
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      if (e.repeat && (key === "s" || key === "j" || key === "k" || key === "l")) return;
+
+      if (key === "s") {
+        e.preventDefault();
+        void onToggleSlideshow(photo.id, !photo.slideshow);
+      } else if (key === "j" || key === "k" || key === "l") {
+        const tag = shortcutTags[key];
+        if (!tag) return;
+        e.preventDefault();
+        const existingTags = photo.tags ?? [];
+        const nextTags = existingTags.includes(tag)
+          ? existingTags.filter((t) => t !== tag)
+          : [...existingTags, tag];
+        void handleUpdateTags(photo.id, nextTags);
+      }
     };
     document.addEventListener("keydown", handleKey);
     document.body.style.overflow = "hidden";
@@ -49,7 +85,7 @@ export function Lightbox({
       document.removeEventListener("keydown", handleKey);
       document.body.style.overflow = "";
     };
-  }, [onClose, onPrev, onNext]);
+  }, [onClose, onPrev, onNext, onRate, onToggleSlideshow, shortcutTags, photo]);
 
   if (!photo) return null;
 

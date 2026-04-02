@@ -1,13 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, Tag, AlertCircle, Loader2 } from "lucide-react";
 import { useTags } from "@/hooks/useTags";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  DEFAULT_TAG_SHORTCUT_SETTINGS,
+  readTagShortcutSettings,
+  TagShortcutSettings,
+  writeTagShortcutSettings,
+} from "@/lib/tagShortcutSettings";
 
 export default function SettingsPage() {
   const { tags, loading, error, addTag, deleteTag } = useTags();
+  const { user } = useAuth();
   const [input, setInput] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [shortcutTags, setShortcutTags] = useState<TagShortcutSettings>(
+    DEFAULT_TAG_SHORTCUT_SETTINGS,
+  );
+
+  useEffect(() => {
+    if (!user) return;
+    setShortcutTags(readTagShortcutSettings(user.id));
+  }, [user]);
+
+  const setShortcutTag = (key: keyof TagShortcutSettings, value: string) => {
+    if (!user) return;
+    const normalized = value || null;
+    setShortcutTags((prev) => {
+      const next = { ...prev, [key]: normalized };
+      writeTagShortcutSettings(user.id, next);
+      return next;
+    });
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +63,38 @@ export default function SettingsPage() {
       </div>
 
       {/* Tag Definitions section */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Tag className="w-4 h-4 text-zinc-400" />
+          <h2 className="text-base font-semibold text-zinc-200">Keyboard Picture Tag Shortcuts</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {(["j", "k", "l"] as const).map((keyName) => (
+            <div key={keyName}>
+              <label className="block text-xs text-zinc-400 mb-1.5 uppercase">
+                {keyName} spot
+              </label>
+              <select
+                value={shortcutTags[keyName] ?? ""}
+                onChange={(e) => setShortcutTag(keyName, e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+              >
+                <option value="">(none)</option>
+                {tags.map((tag) => (
+                  <option key={tag.id} value={tag.name}>
+                    {tag.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-zinc-600">
+          In Gallery view, hover a photo and press <span className="text-zinc-400">J</span>,{" "}
+          <span className="text-zinc-400">K</span>, or <span className="text-zinc-400">L</span> to toggle the selected picture tag on/off.
+        </p>
+      </section>
+
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Tag className="w-4 h-4 text-zinc-400" />
